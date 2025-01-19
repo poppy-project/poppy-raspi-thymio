@@ -1,7 +1,9 @@
-######################################
-#   Jean-Luc.Charles@mailo.com
-#   2024/12/16 - v1.1
-######################################
+#!/bin/env python
+
+# Inria 2025-01-18: David James Sherman <david.sherman@inria.fr>
+#
+# Inspired by detect_camera-3 2024-12-16 - v1.1
+# by Jean-Luc Charles <Jean-Luc.Charles@mailo.com>
 
 import json
 import logging
@@ -24,16 +26,25 @@ CAPTURE_SIZE = (640, 640)
 FRAME_DIR = Path("/run/ucia")
 OUT_FIFO = Path("/run/ucia/detection.fifo")
 
-font1 = ImageFont.truetype("/home/ucia/.config/Ultralytics/Arial.ttf", 12)
-font2 = ImageFont.truetype("/home/ucia/.config/Ultralytics/Arial.ttf", 14)
+FONT = ImageFont.truetype("/home/ucia/.config/Ultralytics/Arial.ttf", 12)
 
-class_name = ("Ball", "Cube", "Star")
-main_color = ("red", "green", "blue")
-class_color = ((80, 145, 255, 250), (240, 150, 100, 250), (255, 255, 255, 250))
-box_color = ((80, 145, 255, 150), (240, 150, 100, 150), (255, 255, 255, 150))
-label_color = ((255, 255, 255, 250), (0, 0, 0, 250), (0, 0, 0, 250))
-label_width = (47, 56, 48)
 
+# Shape class names and colors
+
+
+class Class:
+    def __init__(self, name, color, box, label):
+        self.name = name
+        self.color = color
+        self.box = box
+        self.label = label
+
+
+shape = [
+    Class("Ball", (80, 145, 255, 250), (80, 145, 255, 150), (255, 255, 255, 250)),
+    Class("Cube", (240, 150, 100, 250), (240, 150, 100, 150), (0, 0, 0, 250)),
+    Class("Star", (255, 255, 255, 250), (255, 255, 255, 150), (0, 0, 0, 250)),
+]
 
 # Detector thread
 
@@ -50,7 +61,7 @@ class Detector(threading.Thread):
     ):
         threading.Thread.__init__(self)
         self.sleep_event = threading.Event()
-        self.wait_sec = 60.0 / freq_hz
+        self.wait_sec = 1.0 / freq_hz
         self.daemon = False
         self.camera = camera
         self.detector = detector
@@ -105,7 +116,7 @@ class Detector(threading.Thread):
             )
 
         # Send camera best event
-        self.thymio_event({"cambest": self.best_objects(objects)})
+        self.thymio_event({"camera.best": self.best_objects(objects)})
 
         # Write decorated frame.
         with open(FRAME_DIR / "frame.jpeg", "wb") as f:
@@ -116,16 +127,13 @@ class Detector(threading.Thread):
         """
         Interpret results as objects.
         """
-        for (
-            class_id,
-            confidence,
-            xyxy,
-        ) in zip((int(i) for i in boxes.cls), boxes.conf, boxes.xyxy):
-            name = class_name[class_id]
+        for class_id, confidence, xyxy in zip(
+            (int(i) for i in boxes.cls), boxes.conf, boxes.xyxy
+        ):
+            name = shape[class_id].name
             label = f"{name} {confidence:3.2f}"
-            # The bounding box coordinates:
+            # Bounding box and center
             x1, y1, x2, y2 = xyxy.numpy().astype(int)
-            # object center coordinates:
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
             # mean object color around the center:
             rgb = (
@@ -149,7 +157,11 @@ class Detector(threading.Thread):
 
             # Inform Thymio
             self.thymio_event(
-                {"camera": [obj[i] for i in ["class", "conf", "color", "az", "el"]]}
+                {
+                    "camera.detect": [
+                        obj[i] for i in ["class", "conf", "color", "az", "el"]
+                    ]
+                }
             )
 
             # Yield object
@@ -171,21 +183,21 @@ class Detector(threading.Thread):
         Destructively dcorate an image with the detected boxes.
         """
         draw = ImageDraw.Draw(image, "RGBA")
-        for (
-            class_id,
-            confidence,
-            xyxy,
-        ) in zip((int(i) for i in boxes.cls), boxes.conf, boxes.xyxy):
-            name = class_name[class_id]
-            label = f"{name} {confidence:3.2f}"
+        for class_id, confidence, xyxy in zip(
+            (int(i) for i in boxes.cls), boxes.conf, boxes.xyxy
+        ):
+            label = f"{shape[class_id].name} {confidence:3.2f}"
             x1, y1, x2, y2 = xyxy.numpy().astype(int)
 
-            draw.rectangle([(x1, y1), (x2, y2)], outline=box_color[class_id], width=2)
+            draw.rectangle([(x1, y1), (x2, y2)], outline=shape[class_id].box, width=2)
+            h, w = (m := FONT.getmask(label).getbbox())[3] + 2, m[2] + 1
+            #                sum([*FONT.getmetrics(), (m := FONT.getmask(label).getbbox())[3]]),
             draw.rectangle(
-                ((x1, y1), (x1 + label_width[class_id], y1 - 11)),
-                fill=class_color[class_id],
+                ((x1, y1 - 1), (x1 + w, y1 - h - 2)), fill=shape[class_id].color
             )
-            draw.text((x1, y1 - 12), label, font=font1, fill=label_color[class_id])
+            draw.text(
+                (x1 + 1, y1 - h - 2), label, font=FONT, fill=shape[class_id].label
+            )
 
         return image
 
@@ -229,7 +241,7 @@ def init_camera():
     return picam2
 
 
-def init_detector(yolo_version="v8n", batch=2, epochs=100):
+def init_detector(yolo_version="v8n", batch=2, epochs=100, verbose=False):
     """
     Instantiate the YOLO detector.
     """
@@ -238,7 +250,7 @@ def init_detector(yolo_version="v8n", batch=2, epochs=100):
         / f"UCIA-YOLO{yolo_version}"
         / f"batch-{batch:02d}_epo-{epochs:03d}/weights/best_ncnn_model"
     )
-    model = YOLO(weights, task="detect")
+    model = YOLO(weights, task="detect", verbose=verbose)
     logging.info("Detector model %s: %s", str(weights), str(model))
 
     return model
@@ -246,17 +258,23 @@ def init_detector(yolo_version="v8n", batch=2, epochs=100):
 
 # Aesl program.
 
-aseba_program = r"""var cam[6] = [0, 0, 0, 0, 0, 0]                                                                                                                          
-var cambest[12]
-var i
+aseba_program = r"""var camera.detect[6] = [0, 0, 0, 0, 0, 50]
+var camera.best[12]
 
-onevent camera
-cam[5] = 3 - (3 * (cam[5] % 2))
-call leds.temperature(cam[5], 3 - cam[5])
-cam[0:4] = event.args[0:4]
+onevent camera.best
+camera.best[0:11] = event.args[0:11]
 
-onevent cambest
-cambest[0:11] = event.args[0:11]
+onevent camera.detect
+camera.detect[5] = 50 + (((camera.detect[5] % 10) + 1) % 7)
+call leds.temperature(0, 4 - abs((camera.detect[5] % 10) % 7 - 3))
+camera.detect[0:4] = event.args[0:4]
+
+onevent temperature
+if camera.detect[5] / 10 < 1 then
+	call leds.temperature(3, 0)
+else
+	camera.detect[5] = camera.detect[5] - 10
+end
 """
 
 
@@ -268,7 +286,7 @@ def init_thymio():
     node = aw(client.wait_for_node())
     if node:
         aw(node.lock())
-        aw(node.register_events([("camera", 5), ("cambest", 12)]))
+        aw(node.register_events([("camera.detect", 5), ("camera.best", 12)]))
         aw(node.set_scratchpad(aseba_program))
         if (r := aw(node.compile(aseba_program))) is None:
             logging.info("RUNNING AESL")
@@ -284,21 +302,36 @@ def init_thymio():
 
 
 @click.command()
-@click.option("--freq", help="Capture frequency (Hz)", default=15, type=click.FLOAT)
+@click.option(
+    "--freq",
+    help="Capture frequency (Hz)",
+    default=2,
+    show_default=True,
+    type=click.FLOAT,
+)
 @click.option(
     "--fifo",
-    default=OUT_FIFO,
     help="Output named pipe",
+    default=OUT_FIFO,
+    show_default=True,
     type=click.Path(path_type=Path),
 )
 @click.option(
     "--frame-dir",
-    default=FRAME_DIR,
     help="Output frame directory",
+    default=FRAME_DIR,
+    show_default=True,
     type=click.Path(path_type=Path, exists=True),
 )
-@click.option("--loglevel", default="INFO", help="Logging level", type=click.STRING)
-def main(freq: float, fifo: Path, frame_dir: Path, loglevel: str):
+@click.option("--verbose/--quiet", default=False, help="YOLO verbose")
+@click.option(
+    "--loglevel",
+    help="Logging level",
+    default="INFO",
+    show_default=True,
+    type=click.STRING,
+)
+def main(freq: float, fifo: Path, frame_dir: Path, verbose: bool, loglevel: str):
     """
     Continuously capture an image and detect objects using YOLO.
     Send JSON records to a FIFO and record image frames in files.
@@ -308,7 +341,7 @@ def main(freq: float, fifo: Path, frame_dir: Path, loglevel: str):
     logging.debug("Setting loglevel to %s", "DEBUG")
 
     camera = init_camera()
-    detector = init_detector()
+    detector = init_detector(verbose=verbose)
     thymio = init_thymio()
 
     if not fifo.is_fifo:
