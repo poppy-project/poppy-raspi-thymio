@@ -57,14 +57,14 @@ class Detector(threading.Thread):
     """
 
     def __init__(
-        self, camera, detector, fifo, thymio=None, freq_hz=60, minconf=0.6, maxdetect=6
+        self, camera, yolo, fifo, thymio=None, freq_hz=60, minconf=0.6, maxdetect=6
     ):
         threading.Thread.__init__(self)
         self.sleep_event = threading.Event()
         self.wait_sec = 1.0 / freq_hz
         self.daemon = False
         self.camera = camera
-        self.detector = detector
+        self.yolo = yolo
         self.fifo = fifo
         self.thymio = thymio
         self.minconfidence = minconf
@@ -94,7 +94,7 @@ class Detector(threading.Thread):
             logging.info("Detect_one: wrote raw frame %s", f.name)
 
         # Detect objects
-        results = self.detector.predict(
+        results = self.yolo.predict(
             gray,
             imgsz=CAPTURE_SIZE[0],
             classes=[0, 1, 2],
@@ -116,7 +116,7 @@ class Detector(threading.Thread):
             )
 
         # Send camera best event
-        self.thymio_event({"camera.best": self.best_objects(objects)})
+        self.thymio.events({"camera.best": self.best_objects(objects)})
 
         # Write decorated frame.
         with open(FRAME_DIR / "frame.jpeg", "wb") as f:
@@ -156,7 +156,7 @@ class Detector(threading.Thread):
             }
 
             # Inform Thymio
-            self.thymio_event(
+            self.thymio.events(
                 {
                     "camera.detect": [
                         obj[i] for i in ["class", "conf", "color", "az", "el"]
@@ -213,14 +213,60 @@ class Detector(threading.Thread):
             return 60.0 * (2.0 + (rgb[2] - rgb[0]) / (colmax - colmin))
         return 60.0 * (4.0 + (rgb[0] - rgb[1]) / (colmax - colmin))
 
-    def thymio_event(self, events: dict):
+
+# Thymio class
+
+
+class Thymio:
+    """
+    Manage a connection to a Thymio.
+    """
+
+    def __init__(self):
+        self.client = ClientAsync()
+        self.node = aw(self.client.wait_for_node())
+        if self.node:
+            aw(self.node.lock())
+            aw(self.node.register_events([("camera.detect", 5), ("camera.best", 12)]))
+            aw(self.node.set_scratchpad(self.aseba_program()))
+            if (r := aw(self.node.compile(self.aseba_program()))) is None:
+                logging.info("RUNNING AESL")
+                aw(self.node.run())
+            else:
+                logging.warning("CAN'T RUN AESL: error %d", r)
+        else:
+            logging.warning("Init_thymio: NO NODE")
+
+    def events(self, events: dict):
         """
         Send event to Thymio.
         """
         logging.info("Thymio send event %s", str(events))
-        if self.thymio:
-            aw(self.thymio.lock())
-            aw(self.thymio.send_events(events))
+        if self.node:
+            aw(self.node.lock())
+            aw(self.node.send_events(events))
+
+    def aseba_program(self):
+        """Aesl program."""
+        aseba_program = r"""var camera.detect[6] = [0, 0, 0, 0, 0, 50]
+var camera.best[12]
+
+onevent camera.best
+camera.best[0:11] = event.args[0:11]
+
+onevent camera.detect
+camera.detect[5] = 50 + (((camera.detect[5] % 10) + 1) % 7)
+call leds.temperature(0, 4 - abs((camera.detect[5] % 10) % 7 - 3))
+camera.detect[0:4] = event.args[0:4]
+
+onevent temperature
+if camera.detect[5] / 10 < 1 then
+        call leds.temperature(3, 0)
+else
+        camera.detect[5] = camera.detect[5] - 10
+end
+        """
+        return aseba_program.lstrip(" ")
 
 
 # Initializations
@@ -241,9 +287,9 @@ def init_camera():
     return picam2
 
 
-def init_detector(yolo_version="v8n", batch=2, epochs=100, verbose=False):
+def init_yolo(yolo_version="v8n", batch=2, epochs=100, verbose=False):
     """
-    Instantiate the YOLO detector.
+    Instantiate the YOLO predictor.
     """
     weights = (
         Path("YOLO-trained-V2")
@@ -251,51 +297,9 @@ def init_detector(yolo_version="v8n", batch=2, epochs=100, verbose=False):
         / f"batch-{batch:02d}_epo-{epochs:03d}/weights/best_ncnn_model"
     )
     model = YOLO(weights, task="detect", verbose=verbose)
-    logging.info("Detector model %s: %s", str(weights), str(model))
+    logging.info("Yolo model %s: %s", str(weights), str(model))
 
     return model
-
-
-# Aesl program.
-
-aseba_program = r"""var camera.detect[6] = [0, 0, 0, 0, 0, 50]
-var camera.best[12]
-
-onevent camera.best
-camera.best[0:11] = event.args[0:11]
-
-onevent camera.detect
-camera.detect[5] = 50 + (((camera.detect[5] % 10) + 1) % 7)
-call leds.temperature(0, 4 - abs((camera.detect[5] % 10) % 7 - 3))
-camera.detect[0:4] = event.args[0:4]
-
-onevent temperature
-if camera.detect[5] / 10 < 1 then
-	call leds.temperature(3, 0)
-else
-	camera.detect[5] = camera.detect[5] - 10
-end
-"""
-
-
-def init_thymio():
-    """
-    Instantiate a connection to a Thymio.
-    """
-    client = ClientAsync()
-    node = aw(client.wait_for_node())
-    if node:
-        aw(node.lock())
-        aw(node.register_events([("camera.detect", 5), ("camera.best", 12)]))
-        aw(node.set_scratchpad(aseba_program))
-        if (r := aw(node.compile(aseba_program))) is None:
-            logging.info("RUNNING AESL")
-            aw(node.run())
-        else:
-            logging.warning("CAN'T RUN AESL: error %d", r)
-    else:
-        logging.warning("Init_thymio: NO NODE")
-    return node
 
 
 # Main event.
@@ -338,18 +342,18 @@ def main(freq: float, fifo: Path, frame_dir: Path, verbose: bool, loglevel: str)
     """
     loglevel_int = getattr(logging, loglevel.upper(), logging.INFO)
     logging.basicConfig(format="%(asctime)s %(message)s", level=loglevel_int)
-    logging.debug("Setting loglevel to %s", "DEBUG")
+    logging.info("Setting loglevel to %s", loglevel)
 
     camera = init_camera()
-    detector = init_detector(verbose=verbose)
-    thymio = init_thymio()
+    yolo = init_yolo(verbose=verbose)
+    thymio = Thymio()
 
     if not fifo.is_fifo:
         os.mkfifo(fifo)
         logging.info("Made FIFO %s", fifo)
     fifo_fd = open(fifo, "w")
 
-    detector = Detector(camera, detector, fifo_fd, thymio, freq)
+    detector = Detector(camera, yolo, fifo_fd, thymio, freq)
     detector.start()  # run forever in foreground
 
 
