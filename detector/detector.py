@@ -30,9 +30,6 @@ FRAME_DIR = Path("/run/ucia")
 OUT_FIFO = Path("/run/ucia/detection.fifo")
 
 FONT = ImageFont.truetype("/home/ucia/.config/Ultralytics/Arial.ttf", 12)
-EDGE = (0, 200, 0, 50)
-LANE = (50, 80, 255, 255)
-BEST = (255, 200, 200, 180)
 
 # Hough line detection downsampled image size
 HOUGH_W = 320
@@ -47,11 +44,28 @@ BINS_EDGES = CAPTURE_SIZE[0] / float(BINS_NUM) * np.array(range(BINS_NUM))
 
 BLUR = 4
 
+# See https://personal.sron.nl/~pault/ for color schemes for color-blind users
+BR_BLUE = (68, 119, 170, 255)
+BR_CYAN = (102, 204, 238, 255)
+BR_GREEN = (34, 136, 51, 255)
+BR_YELLOW = (204, 187, 68, 255)
+BR_RED = (238, 102, 119, 255)
+BR_PURPLE = (170, 51, 119, 255)
+BR_GRAY = (187, 187, 187, 255)
 
-# Shape class names and colors
+WHITE = (255, 255, 255, 250)
+BLACK = (0, 0, 0, 250)
+
+# Feature colors
+
+EDGE = BR_BLUE
+LANE = BR_CYAN
+BEST = BR_GRAY
 
 
 class Class:
+    """Shape class names and colors."""
+
     def __init__(self, name, color, box, label):
         self.name = name
         self.color = color
@@ -60,9 +74,9 @@ class Class:
 
 
 shape = [
-    Class("Ball", (80, 145, 255, 250), (80, 145, 255, 150), (255, 255, 255, 250)),
-    Class("Cube", (240, 150, 100, 250), (240, 150, 100, 150), (0, 0, 0, 250)),
-    Class("Star", (255, 255, 255, 250), (255, 255, 255, 150), (0, 0, 0, 250)),
+    Class("Ball", BR_YELLOW, BR_YELLOW, BLACK),
+    Class("Cube", BR_YELLOW, BR_YELLOW, BLACK),
+    Class("Star", BR_YELLOW, BR_YELLOW, BLACK),
 ]
 
 
@@ -253,9 +267,13 @@ class Detector(threading.Thread):
             label = f"{name} {confidence:3.2f}"
             # Bounding box and center
             x1, y1, x2, y2 = (coords := xyxy.numpy().astype(int))
-            if (slope := abs(np.arctan2(y2 - y1, x2 - x1)) - 0.785) > 0.15:
+            if (
+                (slope := abs(np.arctan2(y2 - y1, x2 - x1)) - 0.785) > 0.15
+                or abs(x2 - x1) < 20
+                or abs(y2 - y1) < 20
+            ):
                 logging.debug(
-                    "Ignoring misshaped (%g > 0.15) %d %g %d %d %d %d",
+                    "Ignoring misshaped (%g > 0.15) %d %g %d,%d %d,%d",
                     slope,
                     class_id,
                     confidence,
