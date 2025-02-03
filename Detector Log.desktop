@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Détection objet
+Comment=Détection d'objets dans les images de la caméra RPi.
+# Exec=lxterminal -e '/home/ucia/UCIA/UCIA_ObjectDetection/bin/start_object_detection.sh'
+Exec=lxterminal -e 'tail -f /run/ucia/detection.fifo'
+Icon=/home/ucia/UCIA/UCIA_ObjectDetection/bin/AI.pixmap
+Terminal=true
+Type=Application
+Categories=Application;Development;
+StartupNotify=true
+Name[fr_FR]=DetectObj.desktop
+X-KeepTerminal=true
+Path=/home/ucia/UCIA
+GenericName=Détection d'objets dans les images de la caméra RPi.
