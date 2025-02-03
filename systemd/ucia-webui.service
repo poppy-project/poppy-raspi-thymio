@@ -1,0 +1,14 @@
+[Unit]
+Description=UCIA webui
+After=network-online.target
+
+StartLimitIntervalSec=500
+StartLimitBurst=15
+
+[Service]
+Restart=on-failure
+RestartSec=5s
+ExecStart=bash -c "source /home/ucia/UCIA/vision/bin/activate && cd /home/ucia/UCIA/UCIA_ObjectDetection && python webui.py"
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Thymio Device Manager
+After=network-online.target
+
+StartLimitIntervalSec=500
+StartLimitBurst=15
+
+[Service]
+Restart=on-failure
+RestartSec=5s
+ExecStart=/usr/local/bin/thymio-device-manager --password=UCIA --allow-remote-connections --log info
+
+[Install]
+WantedBy=multi-user.target
