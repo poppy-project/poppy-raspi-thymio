@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "poppy_raspi_thymio"
+authors = [
+  # { name = "...", email = "...@inria.fr" },
+]
+description = "Raspberry Pi—Thymio Vision"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "GPLv3+" }
+documentation = "https://sherman.gitlabpages.inria.fr/poppy_raspi_thymio/"
+repository = "https://gitlab.inria.fr/sherman/poppy_raspi_thymio"
+keywords = [
+  "bioinformatics",
+]
+classifiers = [
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.9",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Unix",
+  # "License :: OSI Approved :: GPLv3+",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "click>=8",
+  "pathvalidate",
+]
+dynamic = [
+  "version",
+]
+
+[project.urls]
+"Homepage" = "https://gitlab.inria.fr/sherman/poppy_raspi_thymio"
+"Bug Tracker" = "https://gitlab.inria.fr/sherman/poppy_raspi_thymio/issues"
+
+[project.scripts]
+poppy-raspi-thymio-detector = "poppy_raspi_thymio.detector:main"
+
+[tool.hatch]
+version.path = "src/poppy_raspi_thymio/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "src/poppy_raspi_thymio",
+]
+
+[tool.hatch.build]
+exclude = [
+  "/.*",
+  "/features",
+  "/test",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+]
+    
+[tool.flake8]
+max-line-length = 96
+
+[tool.isort]
+line_length = 96
+profile = "black"
+
+[tool.pylint]
+disable = ["invalid-name"]
+
+[tool.pylint.imports]
+ignored-modules = ["clyngor", "pandas", "pytest_bdd"]
+
+[flake8]
+max-line-length = 96
+
+[[tool.mypy.overrides]]
+module = [
+  "pytest_bdd.*",
+]
+ignore_missing_imports = true

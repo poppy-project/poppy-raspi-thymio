@@ -1,0 +1,7 @@
+- doc: Check can request help from poppy_raspi_thymio
+  job: poppy_raspi_thymio_help_job.yaml
+  outputs:
+    stdout:
+      asserts:
+        has_line_matching:
+          expression: "^Usage.*"

@@ -1,0 +1,24 @@
+graft docs
+graft src
+graft ci
+graft features
+graft tests
+
+include .bumpversion.cfg
+include .coveragerc
+include .cookiecutterrc
+include .editorconfig
+
+include AUTHORS.md
+include CHANGELOG.md
+include CONTRIBUTING.md
+include LICENSE
+include README.md
+
+include tox.ini
+include pytest.ini
+include .gitlab-ci.yml
+include sonar-project.properties
+include .pylintrc
+
+global-exclude *.py[cod] __pycache__ *.so *.dylib

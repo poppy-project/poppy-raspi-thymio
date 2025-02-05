@@ -1,0 +1,157 @@
+image: python:3.12
+
+default:
+  tags:
+    - small
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+variables:
+  HOME: "$CI_BUILDS_DIR"
+  PYTHON_DFAULT_ENV: py312
+
+before_script:
+  - export PATH="${PATH}:${HOME}/.local/bin"
+  - python -V
+  - python3 -m pip install tox --user
+
+stages:
+  - check
+  - test
+  - quality
+  - docs
+  - build
+  - deploy
+
+check:
+  stage: check
+  script:
+    - tox run -e check
+  allow_failure: true
+
+python 3.X:
+  stage: test
+  image: python:3.${MINOR}
+  script:
+    - tox run -e py3${MINOR}-nocov
+  parallel:
+    matrix:
+      - MINOR:
+          - "10"
+          - "11"
+          - "12"
+          - "13"
+
+coverage test:
+  stage: test
+  needs: ["check"]
+  script:
+    - tox run -e clean,${PYTHON_DEFAULT_ENV}-cover,report
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    paths:
+      - htmlcov/
+      - coverage.xml
+    reports:
+      junit: toxtests.xml
+
+notebook:
+  stage: test
+  needs: ["check"]
+  script:
+    - tox run -e jupyter
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - poppy_raspi_thymio.ipynb
+        - src/poppy_raspi_thymio/*.py
+
+sonar quality:
+  stage: quality
+  needs: [ "coverage test" ]
+  image:
+    name: sonarsource/sonar-scanner-cli:5.0.1
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: "0"
+  script:
+    - tox run -e sonar
+  allow_failure: true
+  artifacts:
+    paths:
+      - pylint-report.txt
+      - coverage.xml
+  # only:
+  #   - main
+  #   - merge_requests
+
+planemo:
+  stage: test
+  needs: ["check", "coverage test"]
+  script:
+    - tox run -e planemo
+  artifacts:
+    paths:
+      - planemo_output.html
+
+pages:
+  stage: docs
+  script:
+    - tox run -e docs
+    - mv dist/docs public
+    - echo Documentation at https://${CI_PROJECT_ROOT_NAMESPACE}.gitlabpages.inria.fr/${CI_PROJECT_PATH#*/}/index.html
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
+
+
+build package:
+  stage: build
+  needs: ["check", "coverage test"]
+  script:
+    - tox -e build
+  artifacts:
+    paths:
+    - dist/
+
+upload package:
+  stage: deploy
+  variables:
+    TWINE_PASSWORD: ${CI_JOB_TOKEN}
+    TWINE_USERNAME: gitlab-ci-token
+    PACKAGE_REPOSITORY: https://gitlab.inria.fr/api/v4/projects/${CI_PROJECT_ID}/packages/pypi
+  script:
+    - tox -e build
+    - pip install twine
+    - python -m twine upload --repository-url ${PACKAGE_REPOSITORY} --skip-existing dist/*
+  artifacts:
+    paths:
+      - dist/*.whl
+  only:
+    - main
+    - merge_requests
+
+pypi_deploy:
+  stage: deploy
+  needs: ["build"]
+  variables:
+    TWINE_PASSWORD: ${PYPI_PROD_TOKEN}
+    TWINE_USERNAME: __token__
+  script:
+    - tox run -e build
+    - pip install twine
+    - python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
+  only:
+    - tags
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: manual
+    - when: never
