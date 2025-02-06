@@ -39,14 +39,14 @@ dynamic = [
 "Bug Tracker" = "https://gitlab.inria.fr/sherman/poppy_raspi_thymio/issues"
 
 [project.scripts]
-poppy-raspi-thymio-detector = "poppy_raspi_thymio.detector:main"
+poppy-raspi-thymio-detector = "poppy.raspi_thymio.detector:main"
 
 [tool.hatch]
-version.path = "src/poppy_raspi_thymio/__init__.py"
+version.path = "src/poppy/raspi_thymio/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = [
-  "src/poppy_raspi_thymio",
+  "src/poppy",
 ]
 
 [tool.hatch.build]
