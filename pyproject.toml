@@ -9,7 +9,7 @@ authors = [
 ]
 description = "Raspberry Pi—Thymio Vision"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 license = { text = "GPLv3+" }
 documentation = "https://sherman.gitlabpages.inria.fr/poppy_raspi_thymio/"
 repository = "https://gitlab.inria.fr/sherman/poppy_raspi_thymio"
@@ -28,11 +28,23 @@ classifiers = [
 ]
 dependencies = [
   "click>=8",
+  "FindSystemFontsFilename",
+  "numpy",
+  "opencv-python",
   "pathvalidate",
+  "pillow",
+  "tdmclient",
+  "ultralytics",
 ]
 dynamic = [
   "version",
 ]
+
+[project.optional-dependencies]
+camera = [
+  "picamera2",
+]
+
 
 [project.urls]
 "Homepage" = "https://gitlab.inria.fr/sherman/poppy_raspi_thymio"
