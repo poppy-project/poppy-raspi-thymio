@@ -7,11 +7,17 @@ from pytest_bdd import given, parsers, scenario, then, when
 
 import poppy.raspi_thymio.colors as colors
 from poppy.raspi_thymio.frame import Frame
+from poppy.raspi_thymio.lane import Lane
 from poppy.raspi_thymio.thing import Kind, Thing
 
 
-@scenario("frame.feature", "Decorate")
-def test_decorate():
+@scenario("frame.feature", "Decorate things")
+def test_decorate_things():
+    """Decorate."""
+
+
+@scenario("frame.feature", "Decorate lanes")
+def test_decorate_lanes():
     """Decorate."""
 
 
@@ -34,6 +40,16 @@ def test_retrieve_grayscale():
 def _(tmpdir):
     """a camera image."""
     image_file = Path("tests") / "data" / "mixed.jpeg"
+
+    frame = Frame(out_dir=tmpdir)
+    frame.get_frame(image_file)
+    return frame
+
+
+@given(parsers.parse("a camera image {image:S}"), target_fixture="frame")
+def _(tmpdir, image):
+    """a camera image."""
+    image_file = Path("tests") / "data" / image
 
     frame = Frame(out_dir=tmpdir)
     frame.get_frame(image_file)
@@ -63,14 +79,26 @@ def _():
 @given("a set of lanes", target_fixture="lanes")
 def _():
     """a set of lanes."""
-    lanes = []
+    lanes = [
+        Lane(
+            xyxy=(250, 590, 395, 590),
+            color=[(100, 100, 100), (0, 0, 0), (100, 100, 100)],
+        ),
+        Lane(xyxy=(424, 445, 450, 400), color=[(50, 50, 50), (0, 0, 0), (50, 50, 50)]),
+    ]
     return lanes
 
 
-@when("decorate things and lanes")
-def _(frame, things, lanes):
-    """decorate things and lanes."""
-    frame.decorate(things, lanes)
+@when("decorate things")
+def _(frame, things):
+    """decorate things."""
+    frame.decorate(things, [])
+
+
+@when("decorate lanes")
+def _(frame, lanes):
+    """decorate lanes."""
+    frame.decorate([], lanes)
 
 
 @when("get edges", target_fixture="edges")
@@ -97,19 +125,28 @@ def _(frame, x_y):
     return frame.remap_gray(x_y)
 
 
-@then("decorated image is as expected")
+@then("decorated things are as expected")
 def _(frame, things):
-    """decorated image is as expected."""
+    """decorated things are as expected."""
     assert frame.color.size == (640, 640)
     for thing in things:
-        assert (
-            frame.color.getpixel((thing.xyxy[0], thing.xyxy[1]))[:3]
-            == colors.BR_YELLOW[:3]
-        )
-        assert (
-            frame.color.getpixel((thing.xyxy[2], thing.xyxy[3]))[:3]
-            == colors.BR_YELLOW[:3]
-        )
+        x1, y1, x2, y2 = thing.xyxy
+        y1, y2 = sorted((y1, y2))
+        # Bounding box (corners)
+        assert frame.color.getpixel((x1, y1))[:3] == colors.BR_YELLOW[:3]
+        assert frame.color.getpixel((x2, y2))[:3] == colors.BR_YELLOW[:3]
+        # Target
+        if thing.best:
+            assert frame.color.getpixel(thing.center)[:3] == colors.BR_GRAY[:3]
+
+
+@then("decorated lanes are as expected")
+def _(frame, lanes):
+    """decorated lanes are as expected."""
+    assert frame.color.size == (640, 640)
+    for lane in lanes:
+        # Lane
+        assert frame.color.getpixel(lane.center)[:3] == colors.BR_CYAN[:3]
 
 
 @then("edges is as expected")

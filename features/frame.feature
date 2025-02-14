@@ -26,9 +26,22 @@ Feature: Frame
     | 10,10 | 10,10   | 20,20   |
     | 100,6 | 100,6   | 200,12  |
 
-  Scenario Outline: Decorate
-    Given a camera image
+  Scenario Outline: Decorate things
+    Given a camera image <image>
     And a set of things
+    When decorate things
+    Then decorated things are as expected
+
+    Examples:
+    | image      |
+    | mixed.jpeg |
+
+  Scenario Outline: Decorate lanes
+    Given a camera image <image>
     And a set of lanes
-    When decorate things and lanes
-    Then decorated image is as expected
+    When decorate lanes
+    Then decorated lanes are as expected
+
+    Examples:
+    | image            |
+    | curve-right.jpeg |

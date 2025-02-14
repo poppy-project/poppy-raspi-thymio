@@ -123,74 +123,40 @@ class Frame:
         Destructively decorate video frame with the detected boxes and lanes.
         """
         draw = ImageDraw.Draw(self.color, "RGBA")
-        bg = colors.BR_YELLOW
-        fg = colors.BLACK
+        bg_col = colors.BR_YELLOW
+        fg_col = colors.BLACK
+        td_col = colors.BR_GRAY
+        ln_col = colors.BR_CYAN
 
         for thing in things:
             x1, y1, x2, y2 = thing.xyxy
             y1, y2 = sorted((y1, y2))
-            draw.rectangle([(x1, y1), (x2, y2)], outline=bg, width=2)
+
+            # Bounding box
+            draw.rectangle([(x1, y1), (x2, y2)], outline=bg_col, width=2)
             h, w = (m := self.font.getmask(thing.label).getbbox())[3] + 2, m[2] + 1
-            draw.rectangle(((x1, y1 - h - 2), (x1 + w, y1 - 1)), fill=bg)
-            draw.text((x1 + 1, y1 - h - 2), thing.label, font=self.font, fill=fg)
+            draw.rectangle(((x1, y1 - h - 2), (x1 + w, y1 - 1)), fill=bg_col)
+            draw.text((x1 + 1, y1 - h - 2), thing.label, font=self.font, fill=fg_col)
+
+            # Target
+            if thing.best:
+                cx, cy = thing.center
+                draw.line([cx, cy - 8, cx, cy + 8], width=1, fill=td_col)
+                draw.line([cx - 8, cy, cx + 8, cy], width=1, fill=td_col)
+
+        for lane in lanes:
+            x1, y1, x2, y2 = lane.xyxy
+            y1, y2 = sorted((y1, y2))
+            cx, cy = lane.center
+            draw.line([x1, y1, x2, y2], width=1, fill=ln_col)
+            # endpts = [*(lane.center - (12, 18)), *(lane.center + (12, 12))]
+            draw.pieslice(
+                [cx - 12, cy - 18, cx + 12, cy + 12], start=50, end=130, fill=ln_col
+            )
 
         with open(self.out_dir / "frame.jpeg", "wb") as f:
             self.color.save(f)
             logging.info("Frame: wrote frame %s", f.name)
-
-        # for class_id, confidence, xyxy in zip(
-        #     (int(i) for i in boxes.cls), boxes.conf, boxes.xyxy
-        # ):
-        #     label = f"{shape[class_id].name} {confidence:3.2f}"
-        #     x1, y1, x2, y2 = xyxy.numpy().astype(int)
-
-        #     draw.rectangle([(x1, y1), (x2, y2)], outline=shape[class_id].box, width=2)
-        #     h, w = (m := FONT.getmask(label).getbbox())[3] + 2, m[2] + 1
-        #     draw.rectangle(
-        #         ((x1, y1 - 1), (x1 + w, y1 - h - 2)), fill=shape[class_id].color
-        #     )
-        #     draw.text(
-        #         (x1 + 1, y1 - h - 2), label, font=FONT, fill=shape[class_id].label
-        #     )
-
-        # for obj in best:
-        #     if not obj:
-        #         continue
-        #     x1, y1, x2, y2 = obj.get("xyxy", (-1, -1, -1, -1))
-        #     cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
-        #     draw.line([cx, cy - 8, cx, cy + 8], width=1, fill=BEST)
-        #     draw.line([cx - 8, cy, cx + 8, cy], width=1, fill=BEST)
-
-        # for line in lines:
-        #     for x1, y1, x2, y2 in line[:, :4]:
-        #         slope = abs(y2 - y1) / float(abs(x2 - x1)) if abs(x2 - x1) > 10 else 50
-        #         if slope > 0.66:
-        #             draw.line([x1, y1, x2, y2], width=1, fill=EDGE)
-        #             a, b = (x1 + x2) // 2, (y1 + y2) // 2
-        #             draw.ellipse([a - 3, b - 3, a + 3, b + 3], fill=EDGE)
-
-        # for cx, cy, x1, y1, x2, y2, *_ in lanes:
-        #     # draw.ellipse([cx - 6, cy - 6, cx + 6, cy + 6], fill=LANE)
-        #     draw.line([x1, y1, x2, y2], width=1, fill=EDGE)
-        #     draw.pieslice(
-        #         [cx - 12, cy - 18, cx + 12, cy + 12], start=50, end=130, fill=LANE
-        #     )
-
-    # @classmethod
-    # def font(cls):
-    #     """Get font definition."""
-    #     if not cls.font:
-    #         try:
-    #             font_file = next((f for f in get_system_fonts_filename() if Path(f).name == "Arial.ttf"), None)
-    #         except FindSystemFontsFilenameException:
-    #             font_file = None
-    #         cls.font = ImageFont.truetype(font_file, 12) if font_file else PIL.ImageFont.load_default(size=12)
-    #         logging.info("Frame: using font %s", cls.font.path)
-    #     return cls.font
-
-    # assets = files("poppy.raspi_thymio.assets")
-    # with as_file(assets.joinpath("Arial.ttf")) as font_file:
-    #     font = ImageFont.truetype(font_file, 12)
 
     @classmethod
     def camera(cls):
