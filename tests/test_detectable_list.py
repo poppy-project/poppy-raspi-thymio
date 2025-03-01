@@ -13,7 +13,7 @@ def make(spec: str):
     return Detectable(
         xyxy=(x, x + 10, x + 10, x),
         kind=DetectableKind(k),
-        color=[int(i*255) for i in colorsys.hls_to_rgb(h=c / 360.0, l=0.5, s=1.0)],
+        color=[int(i * 255) for i in colorsys.hls_to_rgb(h=c / 360.0, l=0.5, s=1.0)],
         confidence=q / 10.0,
         ttl=t,
     )

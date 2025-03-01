@@ -7,6 +7,7 @@ Video frame handling.
 import logging
 from functools import cached_property
 from pathlib import Path
+from typing import Tuple
 
 import cv2
 import numpy as np
@@ -115,6 +116,21 @@ class Frame:
     def remap_xray(self, coord: np.ndarray) -> np.ndarray:
         """Remap coord to x-ray dimensions."""
         return (coord * self.frame_size[0] / self.hough_width).astype(int)
+
+    def center_color(self, center) -> Tuple[int, int, int]:
+        """Mean object color around the center."""
+        cx, cy = center
+
+        rgb = (
+            np.array(self.color)[cy - 7 : cy + 7, cx - 7 : cx + 7]
+            .mean(axis=0)
+            .mean(axis=0)
+            .astype(int)
+        )
+        # logging.debug(
+        #     "*** midpoint color (%d,%d) = %s im %s", cx, cy, str(rgb), str(self.color)
+        # )
+        return rgb
 
     def decorate(self, things, lanes) -> None:
         """

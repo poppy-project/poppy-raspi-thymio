@@ -17,12 +17,7 @@ from typing import List, Tuple
 import numpy as np
 
 from .frame import Frame
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
+from .self_type import Self
 
 Mcenter = np.array([[0.5, 0, 0.5, 0], [0, 0.5, 0, 0.5]])
 DetectableKind = IntEnum("Kind", ("Default", "Other"))
@@ -166,8 +161,35 @@ class DetectableList(List[Detectable]):
         """
         For each kind, choose new target if needed.
         """
-        for k, features in groupby(self, key=lambda d: d.kind):
-            if not any(f.target for f in features):
-                by_conf = sorted(features, key=lambda f: f.confidence, reverse=True)
+        features = sorted(self, key=lambda d: d.kind)
+        for k, grp in groupby(features, key=lambda d: d.kind):
+            subset = list(grp)
+            # logging.debug("Update: subset %s", str(DetectableList(subset)))
+            if not any(f.target for f in subset):
+                by_conf = sorted(subset, key=lambda f: f.confidence, reverse=True)
                 if by_conf and (best := by_conf[0]):
                     best.target = True
+                    logging.debug("Update: %s is target", str(best))
+
+    def format(self):
+        """Format for JSON conversion."""
+        features = sorted(self, key=lambda d: float(d.kind) - d.confidence)
+        result = [
+            {
+                "class": int(f.kind),
+                "conf": int(f.confidence * 100),
+                "color": int(colorsys.rgb_to_hls(*f.color)[0] * 12.0),
+                "az": azel[0],
+                "el": azel[1],
+                "xyxy": f.xyxy.tolist(),
+                "rgb": f.color.tolist(),
+                "name": f.kind.name,
+                "label": f.label,
+            }
+            for f in features
+            for azel in [f.azel]
+        ]
+        return result
+
+    def __str__(self) -> str:
+        return f"DetectableList<{hex(id(self))}({ ", ".join(str(t) for t in self) })>"
