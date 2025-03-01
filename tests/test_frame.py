@@ -7,8 +7,8 @@ from pytest_bdd import given, parsers, scenario, then, when
 
 import poppy.raspi_thymio.colors as colors
 from poppy.raspi_thymio.frame import Frame
-from poppy.raspi_thymio.lane import Lane
-from poppy.raspi_thymio.thing import Kind, Thing
+from poppy.raspi_thymio.lane import Lane, LaneKind
+from poppy.raspi_thymio.thing import Thing, ThingKind
 
 
 @scenario("frame.feature", "Decorate things")
@@ -66,12 +66,12 @@ def _(xy):
 def _():
     """a set of things."""
     things = [
-        Thing(Kind.Ball, xyxy=(21, 490, 72, 433), confidence=0.87),
-        Thing(Kind.Ball, xyxy=(292, 535, 358, 467), confidence=0.92, best=True),
-        Thing(Kind.Cube, xyxy=(294, 392, 342, 332), confidence=0.90),
-        Thing(Kind.Cube, xyxy=(435, 458, 501, 383), confidence=0.91, best=True),
-        Thing(Kind.Star, xyxy=(524, 573, 599, 499), confidence=0.77),
-        Thing(Kind.Star, xyxy=(152, 463, 210, 410), confidence=0.85, best=True),
+        Thing(kind=ThingKind.Ball, xyxy=(21, 490, 72, 433), confidence=0.87),
+        Thing(kind=ThingKind.Ball, xyxy=(292, 535, 358, 467), confidence=0.92, target=True),
+        Thing(kind=ThingKind.Cube, xyxy=(294, 392, 342, 332), confidence=0.90),
+        Thing(kind=ThingKind.Cube, xyxy=(435, 458, 501, 383), confidence=0.91, target=True),
+        Thing(kind=ThingKind.Star, xyxy=(524, 573, 599, 499), confidence=0.77),
+        Thing(kind=ThingKind.Star, xyxy=(152, 463, 210, 410), confidence=0.85, target=True),
     ]
     return things
 
@@ -136,7 +136,7 @@ def _(frame, things):
         assert frame.color.getpixel((x1, y1))[:3] == colors.BR_YELLOW[:3]
         assert frame.color.getpixel((x2, y2))[:3] == colors.BR_YELLOW[:3]
         # Target
-        if thing.best:
+        if thing.target:
             assert frame.color.getpixel(thing.center)[:3] == colors.BR_GRAY[:3]
 
 

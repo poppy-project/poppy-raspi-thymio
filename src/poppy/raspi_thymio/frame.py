@@ -10,10 +10,8 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from find_system_fonts_filename import (
-    FindSystemFontsFilenameException,
-    get_system_fonts_filename,
-)
+from find_system_fonts_filename import FindSystemFontsFilenameException  # type: ignore
+from find_system_fonts_filename import get_system_fonts_filename  # type: ignore
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 import poppy.raspi_thymio.colors as colors
@@ -63,7 +61,7 @@ class Frame:
             hex(id(self)),
             f"log frames to {str(out_dir)}" if out_dir else "not log frames",
         )
-        logging.debug("Frame: using font %s", self.font.path)
+        logging.debug("Frame: using font %s", str(self.font))
 
     def get_frame(self, image_file: Path | None = None) -> None:
         """
@@ -139,7 +137,7 @@ class Frame:
             draw.text((x1 + 1, y1 - h - 2), thing.label, font=self.font, fill=fg_col)
 
             # Target
-            if thing.best:
+            if thing.target:
                 cx, cy = thing.center
                 draw.line([cx, cy - 8, cx, cy + 8], width=1, fill=td_col)
                 draw.line([cx - 8, cy, cx + 8, cy], width=1, fill=td_col)
