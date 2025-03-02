@@ -67,13 +67,13 @@ def _(formatted, balls, cubes, stars):
         subset = [f for f in formatted if f["class"] == int(kind)]
         expected = json.loads(base64.b64decode(todo))
         for x, y in zip(expected, subset):
-            assert approx(x["az"], rel=.5) == y["az"]
-            assert approx(x["el"], rel=.5) == y["el"]
+            assert approx(x["az"], rel=0.5) == y["az"]
+            assert approx(x["el"], rel=0.5) == y["el"]
             assert x["class"] == y["class"]
-            assert approx(x["color"], rel=.5) == y["color"]
-            assert approx(x["conf"], rel=.5) == y["conf"]
+            assert approx(x["color"], rel=0.5) == y["color"]
+            assert approx(x["conf"], rel=0.5) == y["conf"]
             assert x["name"] == y["name"]
-            assert approx(tuple(x["xyxy"]), rel=.5) == tuple(y["xyxy"])
+            assert approx(tuple(x["xyxy"]), rel=0.5) == tuple(y["xyxy"])
 
 
 @then(parsers.parse("found all {balls:S} {cubes:S} {stars:S}"))

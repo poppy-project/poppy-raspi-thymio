@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Things that can be detected
+Things that can be detected.
 """
 
 import colorsys
 import logging
-from dataclasses import dataclass
+import os
 from enum import IntEnum
 from functools import cached_property
 from pathlib import Path
@@ -55,7 +55,7 @@ class Thing(Detectable):
 
     def __str__(self) -> str:
         # return self.label
-        return f"{self.label}{self.center}={self.azel}{'!!' if self.target else ''}"
+        return f"{self.label}{self.center}={self.azel}{'!' if self.target else ''}"
 
 
 class ThingList(DetectableList[Thing]):
@@ -66,24 +66,34 @@ class ThingList(DetectableList[Thing]):
     # YOLO parameters are class attributes.
     minconfidence = 0.6
     maxdetect = 6
-    yolo = None
+    yolo_version = os.environ.get("UCIA_YOLO_VERSION", "v8n")
+    yolo_epochs = os.environ.get("UCIA_YOLO_EPOCHS", 100)
+    yolo_batch = os.environ.get("UCIA_YOLO_BATCH", 2)
+    yolo_weights = (
+        Path(os.environ.get("UCIA_MODELS", "."))
+        / "YOLO-trained-V2"
+        / f"UCIA-YOLO{yolo_version}"
+        / f"batch-{int(yolo_batch):02d}_epo-{int(yolo_epochs):03d}"
+        / "weights/best_ncnn_model"
+    )
+    logging.info("Loading YOLO model %s", yolo_weights)
+    yolo = YOLO(yolo_weights, task="detect", verbose=True)
 
     @classmethod
     def detect(cls, frame: Frame) -> Self:
         """
-        Factory method to detect features in an image.
-        Should be overridden in derived class.
+        Factory method to detect things in an image.
         """
-        if not ThingList.yolo:
+        if not cls.yolo:
             return cls([])
 
         # YOLO detection
-        results = ThingList.yolo.predict(
+        results = cls.yolo.predict(
             frame.gray,
             imgsz=frame.frame_size[0],
             classes=[e.value for e in ThingKind],
-            conf=ThingList.minconfidence,
-            max_det=ThingList.maxdetect,
+            conf=cls.minconfidence,
+            max_det=cls.maxdetect,
         )
         boxes = results[0].boxes
         logging.debug("Thing Detect: detect %d boxes", len(boxes))
@@ -127,4 +137,4 @@ class ThingList(DetectableList[Thing]):
         return cls(find_features(frame, boxes))
 
     def __str__(self) -> str:
-        return f"ThingList<{hex(id(self))}({ ", ".join(str(t) for t in self) })>"
+        return f"ThingList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"
