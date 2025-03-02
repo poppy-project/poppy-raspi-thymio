@@ -1,0 +1,194 @@
+var camera.detect[6] = [0, 0, 0, 0, 0, 50]
+var camera.best[12]
+
+var vin = 200
+var vout = 200
+var slow
+var turn
+var target = 1
+var state = 0
+var scan_phase = 0
+var seen = 0
+var wait_state
+
+call math.fill(camera.best, 0)
+
+onevent camera.best
+camera.best[0:11] = event.args[0:11]
+
+onevent camera.detect
+camera.detect[5] = 50 + (((camera.detect[5] % 10) + 1) % 7)
+call leds.temperature(0, 4 - abs((camera.detect[5] % 10) % 7 - 3))
+camera.detect[0:4] = event.args[0:4]
+
+# Heartbeat
+
+onevent temperature
+if camera.detect[5] / 10 < 1 then
+        call leds.temperature(3, 0)
+else
+        camera.detect[5] = camera.detect[5] - 10
+end
+
+# State machine
+
+onevent acc
+	leds.circle = [0,0,0,0,0,0,0,0]
+	leds.circle[state] = 16
+	# State dispatch
+	if  state == 0 then
+		callsub rosa_0_stop
+	end
+	if  state == 1 then
+		callsub rosa_1_orient
+	end
+	if  state == 2 then
+		callsub rosa_2_pursue
+	end
+	if  state == 4 then
+		callsub rosa_4_return
+	end
+	if  state == 5 then
+		callsub rosa_5_scan
+	end
+
+#Targets = [0, 93, 3, -885, 62,   1, 83, 2, 731, 554,   2, 86, 3, 151, 392]
+#call math.fill(camera.best, 0)
+
+sub rosa_0_stop
+	state = 0
+	seen = 0
+	leds.top = [32,0,0]
+	motor.left.target = 0
+	motor.right.target = 0
+
+sub rosa_1_orient
+	state = 1
+	if abs(camera.best[target * 4 + 3]) < 20 then
+		state = 2
+		return
+	end
+	vout = 200
+	vin = -vout
+	timer.period[1] = abs(camera.best[target * 4 + 3] / 2)
+	callsub start_turn
+
+sub rosa_2_pursue
+	state = 2
+	leds.top = [0,32,0]
+	vout = 120
+	# Check for success
+	if seen > 3 and (camera.best[target * 4 + 1] < 10 or camera.best[target * 4 + 4] < 10) then
+		state = 4
+		return
+	end
+	# Otherwise continue pursuit
+	seen = seen + 1
+	slow = ((3 * (camera.best[target * 4 + 4]-60)) + 400) / 20
+	vout = vout * slow / 100
+	turn = 100 - abs(camera.best[target * 4 + 3]) / 10
+	vin = (vout * turn) / 100
+	callsub start_turn
+
+sub start_turn
+	if  camera.best[target * 4 + 3] >= 0 then
+		motor.left.target = vout
+		motor.right.target = vin
+	else
+		motor.left.target = vin
+		motor.right.target = vout
+	end
+
+sub rosa_4_return
+	state = 4
+	seen = 0
+    callsub flip
+
+sub flip
+	leds.top = [0,32,10]
+	motor.left.target = -400
+	motor.right.target = 400
+	timer.period[1] = 1250
+
+sub rosa_5_scan
+	state = 5
+	seen = 0
+	leds.top = [0,0,10]
+	scan_phase = (scan_phase + 1) % 4
+	if  scan_phase == 1 or scan_phase == 2 then
+		motor.left.target = -10
+		motor.right.target = 10
+	else
+		motor.left.target = 10
+		motor.right.target = -10
+	end
+	timer.period[1] = 3500
+
+# Buttons and tap
+
+onevent button.center
+	target = 1
+	state = 0
+	callsub rosa_0_stop
+
+onevent button.forward
+	state = 1
+
+onevent button.left
+	target = 0
+
+onevent button.right
+	target = 2
+
+onevent button.backward
+	state = 0
+	callsub flip
+
+onevent tap
+	callsub rosa_0_stop
+
+# Motion timer and proximity sensors
+
+onevent prox
+	# Manual success
+	if  prox.horizontal[5] > 1200 then
+		state = 4
+	end
+
+	# Success and Emergency stop
+	if  prox.ground.delta[0] < 600 or prox.ground.delta[1] < 600 then
+		leds.bottom.left = [30,0,30]
+		leds.bottom.right = [30,0,30]
+		motor.left.target = -100
+		motor.right.target = -100
+		timer.period[1] = 500
+		state = 0
+	end
+
+onevent timer1
+	motor.left.target = 0
+	motor.right.target = 0
+	timer.period[1] = 0
+	if  state == 7 then
+		state = wait_state
+	end
+	if  state == 1 then
+		wait_state = state
+		state = 7
+		timer.period[0] = 1200
+	end
+	if  state == 4 then
+		motor.left.target = 100
+		motor.right.target = 100
+		wait_state = 0
+		state = 7
+	end
+	if  state == 5 then
+		callsub rosa_5_scan
+	end
+
+onevent timer0
+	timer.period[0] = 0
+	if  state == 7 then
+		state = wait_state
+	end

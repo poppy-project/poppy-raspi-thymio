@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "poppy_raspi_thymio"
 authors = [
-  # { name = "...", email = "...@inria.fr" },
+  { name = "David James Sherman", email = "david.sherman@inria.fr" },
 ]
 description = "Raspberry Pi—Thymio Vision"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 license = { text = "GPLv3+" }
 documentation = "https://sherman.gitlabpages.inria.fr/poppy_raspi_thymio/"
 repository = "https://gitlab.inria.fr/sherman/poppy_raspi_thymio"
@@ -84,7 +84,7 @@ profile = "black"
 disable = ["invalid-name"]
 
 [tool.pylint.imports]
-ignored-modules = ["clyngor", "pandas", "pytest_bdd"]
+ignored-modules = ["pytest_bdd"]
 
 [flake8]
 max-line-length = 96
