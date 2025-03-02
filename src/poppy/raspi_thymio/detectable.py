@@ -192,4 +192,4 @@ class DetectableList(List[Detectable]):
         return result
 
     def __str__(self) -> str:
-        return f"DetectableList<{hex(id(self))}({ ", ".join(str(t) for t in self) })>"
+        return f"DetectableList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"

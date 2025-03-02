@@ -17,6 +17,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 import poppy.raspi_thymio.colors as colors
 
+Mcenter = np.array([[0.5, 0, 0.5, 0], [0, 0.5, 0, 0.5]])
+
 
 class Frame:
     """
@@ -131,6 +133,12 @@ class Frame:
         #     "*** midpoint color (%d,%d) = %s im %s", cx, cy, str(rgb), str(self.color)
         # )
         return rgb
+
+    def center_color_xyxy(self, xyxy) -> np.ndarray:
+        """
+        Center coordinates of a box.
+        """
+        return self.center_color((Mcenter @ xyxy).astype(int))
 
     def decorate(self, things, lanes) -> None:
         """
