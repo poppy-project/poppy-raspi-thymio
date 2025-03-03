@@ -29,10 +29,11 @@ classifiers = [
 dependencies = [
   "click>=8",
   "FindSystemFontsFilename",
+  "ncnn",
   "numpy",
   "opencv-python",
   "pathvalidate",
-  "pillow",
+  "pillow>=11",
   "tdmclient",
   "ultralytics",
 ]
