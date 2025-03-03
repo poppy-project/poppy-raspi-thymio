@@ -12,7 +12,7 @@ def test_main():
     Check that poppy_raspi_thymio's main function can be called.
     """
     runner = CliRunner()
-    result = runner.invoke(main, [])
+    result = runner.invoke(main, ["--help"])
 
-    assert result.output == "()\n"
+    assert "Usage:" in result.output
     assert result.exit_code == 0

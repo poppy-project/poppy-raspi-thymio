@@ -83,6 +83,21 @@ class Detectable:
 
         return self.kind == other.kind and cen_ssq <= 100 and abs(col_diff) <= 0.1
 
+    def format(self):
+        """Format for JSON conversion."""
+        result = {
+            "class": int(self.kind),
+            "conf": int(self.confidence * 100),
+            "color": int(colorsys.rgb_to_hls(*self.color)[0] * 12.0),
+            "az": self.azel[0],
+            "el": self.azel[1],
+            "xyxy": self.xyxy.astype(int).tolist(),
+            # "rgb": self.color,
+            "name": self.kind.name,
+            "label": self.label,
+        }
+        return result
+
     def __lt__(self, other) -> bool:
         """Order by kind then by confidence."""
         return (self.kind.value - self.confidence) < (
@@ -174,21 +189,7 @@ class DetectableList(List[Detectable]):
     def format(self):
         """Format for JSON conversion."""
         features = sorted(self, key=lambda d: float(d.kind) - d.confidence)
-        result = [
-            {
-                "class": int(f.kind),
-                "conf": int(f.confidence * 100),
-                "color": int(colorsys.rgb_to_hls(*f.color)[0] * 12.0),
-                "az": azel[0],
-                "el": azel[1],
-                "xyxy": f.xyxy.tolist(),
-                "rgb": f.color.tolist(),
-                "name": f.kind.name,
-                "label": f.label,
-            }
-            for f in features
-            for azel in [f.azel]
-        ]
+        result = [f.format() for f in features]
         return result
 
     def __str__(self) -> str:

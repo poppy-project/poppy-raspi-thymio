@@ -1,5 +1,6 @@
 var camera.detect[6] = [0, 0, 0, 0, 0, 50]
 var camera.best[12]
+var camera.lane[3]
 
 var vin = 200
 var vout = 200
@@ -20,6 +21,9 @@ onevent camera.detect
 camera.detect[5] = 50 + (((camera.detect[5] % 10) + 1) % 7)
 call leds.temperature(0, 4 - abs((camera.detect[5] % 10) % 7 - 3))
 camera.detect[0:4] = event.args[0:4]
+
+onevent camera.lane
+camera.lane[0:2] = event.args[0:2]
 
 # Heartbeat
 

@@ -195,7 +195,7 @@ class Frame:
             cls._camera = False
             return None
 
-        if not cls._camera and cls._camers is not False:
+        if not cls._camera and cls._camera is not False:
             cls._camera = Picamera2()
             cls._camera.preview_configuration.main.size = cls.frame_size
             cls._camera.preview_configuration.main.format = "RGB888"

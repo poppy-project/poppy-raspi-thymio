@@ -54,6 +54,21 @@ class Lane(Detectable):
         """Lane text label."""
         return f"{self.azel[0]}"
 
+    def format(self):
+        """Format for JSON conversion."""
+        result = super().format()
+        result["slope"] = self.slope
+        return result
+
+    def event(self) -> List[List[int]]:
+        """
+        Format single thing as Thymio event.
+        """
+        f = self.format()
+        vec = [f.get(i, 0) for i in ["az", "el", "slope"]]
+        vec[2] = int(vec[2] * 100)
+        return vec
+
     def __str__(self) -> str:
         return self.label
 
@@ -64,8 +79,8 @@ class LaneList(DetectableList[Lane]):
     """
 
     # Hough parameters rho, theta, threshold; min pts, max gap; iterations
-    hough_params = (2, np.pi / 90, 15)
-    minlen, maxgap = (15, 25)
+    hough_params = [2, np.pi / 90, 15]
+    minlen, maxgap = 15, 25
     hough_iter = 8
 
     # Shared history of past lines
@@ -98,7 +113,7 @@ class LaneList(DetectableList[Lane]):
         logging.info("Best lanes %s", best_lanes)
 
         return cls(
-            Lane(xyxy=line[2:6], kind=LaneKind.Center, slope=line[6])
+            Lane(xyxy=np.array(line[2:6]), kind=LaneKind.Center, slope=line[6])
             for line in best_lanes
         )
 
@@ -176,6 +191,18 @@ class LaneList(DetectableList[Lane]):
         # logging.debug("*** candidates %s", str(candidates))
 
         return candidates[: min(2, len(candidates))]
+
+    def event(self) -> List[List[int]]:
+        """
+        Format lanes as Thymio event.
+        """
+        best = {
+            k: obj.event()
+            for k in LaneKind
+            for obj in self
+            if obj.kind == k and obj.target
+        }
+        return [i for k in LaneKind for i in best.get(k, [0, 0, 0]) if k < 9]
 
     def __str__(self) -> str:
         return f"LaneList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"

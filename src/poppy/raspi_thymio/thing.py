@@ -53,6 +53,13 @@ class Thing(Detectable):
         """Thing text label."""
         return f"{self.kind.name} {self.confidence:3.2f}"
 
+    def event(self) -> List[List[int]]:
+        """
+        Format single thing as Thymio event.
+        """
+        f = self.format()
+        return [f.get(i, 0) for i in ["conf", "color", "az", "el"]]
+
     def __str__(self) -> str:
         # return self.label
         return f"{self.label}{self.center}={self.azel}{'!' if self.target else ''}"
@@ -94,6 +101,7 @@ class ThingList(DetectableList[Thing]):
             classes=[e.value for e in ThingKind],
             conf=cls.minconfidence,
             max_det=cls.maxdetect,
+            verbose=False,
         )
         boxes = results[0].boxes
         logging.debug("Thing Detect: detect %d boxes", len(boxes))
@@ -135,6 +143,18 @@ class ThingList(DetectableList[Thing]):
 
         # Return list of things.
         return cls(find_features(frame, boxes))
+
+    def event(self) -> List[List[int]]:
+        """
+        Format things as Thymio event.
+        """
+        best = {
+            k: obj.event()
+            for k in ThingKind
+            for obj in self
+            if obj.kind == k and obj.target
+        }
+        return [i for k in ThingKind for i in best.get(k, [0, 0, 0, 0]) if k < 9]
 
     def __str__(self) -> str:
         return f"ThingList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"
