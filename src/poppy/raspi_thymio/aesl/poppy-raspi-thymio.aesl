@@ -151,6 +151,29 @@ onevent button.backward
 onevent tap
 	callsub rosa_0_stop
 
+# RC5 remote
+
+onevent rc5
+if rc5.command == 80 then  # forward
+	state = 1
+elseif rc5.command == 81 then  # backward
+	state = 0
+	callsub flip
+elseif rc5.command == 85 or rc5.command == 1 then  # left
+	target = 0
+elseif rc5.command == 2 then  # right
+	target = 1
+elseif rc5.command == 86 or rc5.command == 3 then  # right
+	target = 2
+elseif rc5.command == 87 then  # right
+	target = 1
+	callsub rosa_0_stop
+elseif rc5.command == 53 then  # GO
+	callsub rosa_5_scan
+else
+	target = target # do nothing
+end
+
 # Motion timer and proximity sensors
 
 onevent prox

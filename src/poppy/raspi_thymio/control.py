@@ -69,7 +69,7 @@ class Control(threading.Thread):
 
         self.things.update_targets()
         self.lanes.update_targets()
-        
+
         # things = ThingList.detect(self.frame)
         # logging.info("Detect found %d things", len(things))
 
