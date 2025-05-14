@@ -21,11 +21,22 @@ from .self_type import Self
 
 
 class ThingKind(IntEnum):
-    Ball = 0
-    Cube = 1
-    Star = 2
-    Other = 9
-
+    Park = 0
+    Ball = 1
+    Target = 2
+    Cube = 3
+    Cylinder = 4
+    Hexagon = 5
+    Home = 6
+    laneL = 7
+    laneR = 8
+    lineS = 9
+    Nest = 10
+    Star = 11
+    Stop = 12
+    Triangle = 13
+    Crosswalk = 14
+    Other = 15
 
 class Thing(Detectable):
     """
@@ -74,12 +85,12 @@ class ThingList(DetectableList[Thing]):
     minconfidence = 0.6
     maxdetect = 6
     yolo_version = os.environ.get("UCIA_YOLO_VERSION", "v8n")
-    yolo_epochs = os.environ.get("UCIA_YOLO_EPOCHS", 100)
-    yolo_batch = os.environ.get("UCIA_YOLO_BATCH", 2)
+    yolo_epochs = os.environ.get("UCIA_YOLO_EPOCHS", 300)
+    yolo_batch = os.environ.get("UCIA_YOLO_BATCH", 30)
     yolo_weights = (
         Path(os.environ.get("UCIA_MODELS", "."))
-        / "YOLO-trained-V2"
-        / f"UCIA-YOLO{yolo_version}"
+        / "YOLO-trained-V3"
+        / f"UCIA-II-YOLO{yolo_version}"
         / f"batch-{int(yolo_batch):02d}_epo-{int(yolo_epochs):03d}"
         / "weights/best_ncnn_model"
     )
