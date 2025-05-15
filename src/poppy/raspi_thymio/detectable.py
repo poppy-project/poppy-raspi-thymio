@@ -154,7 +154,7 @@ class DetectableList(List[Detectable]):
                 del self[i]
                 continue
             feature.ttl -= 1
-            for j, candidate in enumerate(pool[feature.kind]):
+            for j, candidate in enumerate(pool.get(feature.kind, {})):
                 logging.debug("Detectable: eval %s", str(feature))
                 if feature.same_as(candidate):
                     logging.debug(

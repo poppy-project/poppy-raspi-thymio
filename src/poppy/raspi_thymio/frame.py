@@ -140,7 +140,7 @@ class Frame:
         """
         return self.center_color((Mcenter @ xyxy).astype(int))
 
-    def decorate(self, things, lanes) -> None:
+    def decorate(self, things=None, lanes=None) -> None:
         """
         Destructively decorate video frame with the detected boxes and lanes.
         """
@@ -150,7 +150,7 @@ class Frame:
         td_col = colors.BR_GRAY
         ln_col = colors.BR_CYAN
 
-        for thing in things:
+        for thing in things or []:
             x1, y1, x2, y2 = thing.xyxy
             y1, y2 = sorted((y1, y2))
 
@@ -166,7 +166,7 @@ class Frame:
                 draw.line([cx, cy - 8, cx, cy + 8], width=1, fill=td_col)
                 draw.line([cx - 8, cy, cx + 8, cy], width=1, fill=td_col)
 
-        for lane in lanes:
+        for lane in lanes or []:
             x1, y1, x2, y2 = lane.xyxy
             y1, y2 = sorted((y1, y2))
             cx, cy = lane.center

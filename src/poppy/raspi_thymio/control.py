@@ -31,6 +31,8 @@ class Control(threading.Thread):
         fifo_fd: Path,
         frame_dir: Path,
         freq_hz=60,
+        # detectables=[ThingList(), LaneList()]
+        detectables=[ThingList()]
     ):
         threading.Thread.__init__(self)
         self.sleep_event = threading.Event()
@@ -43,8 +45,9 @@ class Control(threading.Thread):
         self.frame = Frame(out_dir=frame_dir)
         self.thymio = Thymio(start=True)
 
-        self.things = ThingList()
-        self.lanes = LaneList()
+        # self.things = ThingList()
+        # self.lanes = LaneList()
+        self.detectables = detectables
 
         logging.info("Control loop fires every %g sec", self.wait_sec)
 
@@ -64,11 +67,15 @@ class Control(threading.Thread):
         Capture one frame and detect objects.
         """
         self.frame.get_frame()
-        self.things.refresh(self.frame)
-        self.lanes.refresh(self.frame)
+        for objects in self.detectables:
+            objects.refresh(self.frame)
+        # self.things.refresh(self.frame)
+        # self.lanes.refresh(self.frame)
 
-        self.things.update_targets()
-        self.lanes.update_targets()
+        for objects in self.detectables:
+            objects.update_targets()
+        # self.things.update_targets()
+        # self.lanes.update_targets()
 
         # things = ThingList.detect(self.frame)
         # logging.info("Detect found %d things", len(things))
@@ -77,7 +84,8 @@ class Control(threading.Thread):
         # logging.info("Detect found %d lanes", len(things))
 
         # Write detected objects.
-        for objects in self.things, self.lanes:
+        # for objects in self.things, self.lanes:
+        for objects in self.detectables:
             output = json.dumps(objects.format())
             bytes = self.fifo_fd.write(f"{output}\n")
             self.fifo_fd.flush()
@@ -86,16 +94,20 @@ class Control(threading.Thread):
             )
 
         # Write decorated frame.
-        self.frame.decorate(self.things, self.lanes)
+        # self.frame.decorate(self.things, self.lanes)
+        self.frame.decorate(*self.detectables)
 
         # Send Thymio events.
-        self.thymio.events({"camera.best": (e := self.things.event())})
-        logging.debug("Send event camera.best %s", str(e))
+        for objects in self.detectables:
+            name = type(objects[0] if objects else objects).__name__.lower()
+            self.thymio.events({f"camera.{ name }": (e := objects.event())})
+            logging.debug(f"Send event camera.{ name } %s", str(e))
 
-        self.thymio.events({"camera.lane": (e := self.lanes.event())})
-        logging.debug("Send event camera.lane %s", str(e))
+        # self.thymio.events({"camera.lane": (e := self.lanes.event())})
+        # logging.debug("Send event camera.lane %s", str(e))
 
-        for thing in self.things:
-            v = thing.event()  # conf color az el
-            self.thymio.events({"camera.detect": (e := [int(thing.kind), *v])})
-            logging.debug("Send event camera.detect %s", str(e))
+        for objects in self.detectables:
+            for thing in objects:
+                v = thing.event()  # conf color az el
+                self.thymio.events({"camera.detect": (e := [int(thing.kind), *v])})
+                logging.debug("Send event camera.detect %s", str(e))

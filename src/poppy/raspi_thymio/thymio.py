@@ -39,7 +39,7 @@ class Thymio:
             aw(self.node.lock())
             aw(
                 self.node.register_events(
-                    [("camera.detect", 5), ("camera.best", 12), ("camera.lane", 3)]
+                    [("camera.detect", 5), ("camera.thing", 60), ("camera.best", 12), ("camera.lane", 3)]
                 )
             )
             aw(self.node.set_scratchpad(self.aseba_program()))

@@ -1,5 +1,6 @@
 var camera.detect[6] = [0, 0, 0, 0, 0, 50]
 var camera.best[12]
+var camera.thing[60]
 var camera.lane[3]
 
 var vin = 200
@@ -13,6 +14,7 @@ var seen = 0
 var wait_state
 
 call math.fill(camera.best, 0)
+call math.fill(camera.thing, 0)
 
 onevent camera.best
 camera.best[0:11] = event.args[0:11]
@@ -21,6 +23,10 @@ onevent camera.detect
 camera.detect[5] = 50 + (((camera.detect[5] % 10) + 1) % 7)
 call leds.temperature(0, 4 - abs((camera.detect[5] % 10) % 7 - 3))
 camera.detect[0:4] = event.args[0:4]
+camera.thing[(event.args[0]*4)+0] = event.args[1]
+camera.thing[(event.args[0]*4)+1] = event.args[2]
+camera.thing[(event.args[0]*4)+2] = event.args[3]
+camera.thing[(event.args[0]*4)+3] = event.args[4]
 
 onevent camera.lane
 camera.lane[0:2] = event.args[0:2]

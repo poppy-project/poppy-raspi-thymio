@@ -95,7 +95,8 @@ class ThingList(DetectableList[Thing]):
         / "weights/best_ncnn_model"
     )
     logging.info("Loading YOLO model %s", yolo_weights)
-    yolo = YOLO(yolo_weights, task="detect", verbose=True)
+    yolo = YOLO(yolo_weights, task="detect", verbose=False)
+    logging.info("Loaded YOLO model")
 
     @classmethod
     def detect(cls, frame: Frame) -> Self:
@@ -165,7 +166,7 @@ class ThingList(DetectableList[Thing]):
             for obj in self
             if obj.kind == k and obj.target
         }
-        return [i for k in ThingKind for i in best.get(k, [0, 0, 0, 0]) if k < 9]
+        return [i for k in ThingKind for i in best.get(k, [0, 0, 0, 0]) if k < ThingKind.Other]
 
     def __str__(self) -> str:
         return f"ThingList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"
