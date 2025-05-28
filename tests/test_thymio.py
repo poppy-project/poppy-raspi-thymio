@@ -13,7 +13,7 @@ def test_thymio():
     program = thymio.aseba_program()
 
     assert "var camera.detect" in program
-    assert "var camera.best" in program
+    assert "var camera.thing" in program
 
     if thymio.client:
         thymio.node.stop()

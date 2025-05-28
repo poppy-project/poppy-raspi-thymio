@@ -21,21 +21,21 @@ from .self_type import Self
 
 
 class ThingKind(IntEnum):
-    Park = 0
-    Ball = 1
-    Target = 2
+    Parking = 0
+    Balle = 1
+    Cible = 2
     Cube = 3
-    Cylinder = 4
-    Hexagon = 5
+    Cylindre = 4
+    Hexagone = 5
     Home = 6
-    laneL = 7
-    laneR = 8
-    lineS = 9
-    Nest = 10
-    Star = 11
+    Gauche = 7
+    Droite = 8
+    Voie = 9
+    Nid = 10
+    Etoile = 11
     Stop = 12
     Triangle = 13
-    Crosswalk = 14
+    Zebra = 14
     Other = 15
 
 class Thing(Detectable):
@@ -62,7 +62,7 @@ class Thing(Detectable):
     @property
     def label(self) -> str:
         """Thing text label."""
-        return f"{self.kind.name} {self.confidence:3.2f}"
+        return f"{self.kind.name} {self.kind} {self.confidence:3.2f}"
 
     def event(self) -> List[List[int]]:
         """
@@ -83,7 +83,7 @@ class ThingList(DetectableList[Thing]):
 
     # YOLO parameters are class attributes.
     minconfidence = 0.6
-    maxdetect = 6
+    maxdetect = 15
     yolo_version = os.environ.get("UCIA_YOLO_VERSION", "v8n")
     yolo_epochs = os.environ.get("UCIA_YOLO_EPOCHS", 300)
     yolo_batch = os.environ.get("UCIA_YOLO_BATCH", 30)
