@@ -1,7 +1,6 @@
-var camera.detect[6] = [0, 0, 0, 0, 0, 50]
-var camera.best[12]
+var _camera.heartbeat = 50
+var camera.detect[5] = [0, 0, 0, 0, 0]
 var camera.thing[60]
-var camera.lane[3]
 
 var vin = 200
 var vout = 200
@@ -13,31 +12,27 @@ var scan_phase = 0
 var seen = 0
 var wait_state
 
-call math.fill(camera.best, 0)
 call math.fill(camera.thing, 0)
 
-onevent camera.best
-camera.best[0:11] = event.args[0:11]
+## onevent camera.thing
+## camera.thing[0:11] = event.args[0:11]
 
 onevent camera.detect
-camera.detect[5] = 50 + (((camera.detect[5] % 10) + 1) % 7)
-call leds.temperature(0, 4 - abs((camera.detect[5] % 10) % 7 - 3))
-camera.detect[0:4] = event.args[0:4]
-camera.thing[(event.args[0]*4)+0] = event.args[1]
-camera.thing[(event.args[0]*4)+1] = event.args[2]
-camera.thing[(event.args[0]*4)+2] = event.args[3]
-camera.thing[(event.args[0]*4)+3] = event.args[4]
-
-onevent camera.lane
-camera.lane[0:2] = event.args[0:2]
+_camera.heartbeat = 50 + (((_camera.heartbeat % 10) + 1) % 7)
+call leds.temperature(0, 4 - abs((_camera.heartbeat % 10) % 7 - 3))
+## camera.detect[0:4] = event.args[0:4]
+## camera.thing[(event.args[0]*4)+0] = event.args[1]
+## camera.thing[(event.args[0]*4)+1] = event.args[2]
+## camera.thing[(event.args[0]*4)+2] = event.args[3]
+## camera.thing[(event.args[0]*4)+3] = event.args[4]
 
 # Heartbeat
 
 onevent temperature
-if camera.detect[5] / 10 < 1 then
+if _camera.heartbeat / 10 < 1 then
         call leds.temperature(3, 0)
 else
-        camera.detect[5] = camera.detect[5] - 10
+        _camera.heartbeat = _camera.heartbeat - 10
 end
 
 # State machine
@@ -63,7 +58,7 @@ onevent acc
 	end
 
 #Targets = [0, 93, 3, -885, 62,   1, 83, 2, 731, 554,   2, 86, 3, 151, 392]
-#call math.fill(camera.best, 0)
+#call math.fill(camera.thing, 0)
 
 sub rosa_0_stop
 	state = 0
@@ -74,13 +69,13 @@ sub rosa_0_stop
 
 sub rosa_1_orient
 	state = 1
-	if abs(camera.best[target * 4 + 3]) < 20 then
+	if abs(camera.thing[target * 4 + 3]) < 20 then
 		state = 2
 		return
 	end
 	vout = 200
 	vin = -vout
-	timer.period[1] = abs(camera.best[target * 4 + 3] / 2)
+	timer.period[1] = abs(camera.thing[target * 4 + 3] / 2)
 	callsub start_turn
 
 sub rosa_2_pursue
@@ -88,20 +83,20 @@ sub rosa_2_pursue
 	leds.top = [0,32,0]
 	vout = 120
 	# Check for success
-	if seen > 3 and (camera.best[target * 4 + 1] < 10 or camera.best[target * 4 + 4] < 10) then
+	if seen > 3 and (camera.thing[target * 4 + 1] < 10 or camera.thing[target * 4 + 4] < 10) then
 		state = 4
 		return
 	end
 	# Otherwise continue pursuit
 	seen = seen + 1
-	slow = ((3 * (camera.best[target * 4 + 4]-60)) + 400) / 20
+	slow = ((3 * (camera.thing[target * 4 + 4]-60)) + 400) / 20
 	vout = vout * slow / 100
-	turn = 100 - abs(camera.best[target * 4 + 3]) / 10
+	turn = 100 - abs(camera.thing[target * 4 + 3]) / 10
 	vin = (vout * turn) / 100
 	callsub start_turn
 
 sub start_turn
-	if  camera.best[target * 4 + 3] >= 0 then
+	if  camera.thing[target * 4 + 3] >= 0 then
 		motor.left.target = vout
 		motor.right.target = vin
 	else

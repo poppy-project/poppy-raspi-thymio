@@ -111,3 +111,15 @@ class Control(threading.Thread):
                 v = thing.event()  # conf color az el
                 self.thymio.events({"camera.detect": (e := [int(thing.kind), *v])})
                 logging.debug("Send event camera.detect %s", str(e))
+                self.thymio.variables({"camera.detect": e})
+                logging.debug("Set variable camera.detect %s", str(e))
+
+        # Send Thymio variables.
+        values = [0] * (4 * (len(ThingKind) - 1))
+        for objects in self.detectables:
+            for thing in objects:
+                v = thing.event()  # conf color az el
+                base = thing.kind * 4
+                values[base:base + len(v)] = v
+        self.thymio.variables({"camera.thing": values})
+        logging.debug("Set variable camera.thing %s", str(e))

@@ -68,6 +68,16 @@ class Thymio:
             aw(self.node.lock())
             aw(self.node.send_events(events))
 
+    def variables(self, assignments: dict) -> None:
+        """
+        Assign variables on Thymio.
+        """
+        for var, values in assignments.items():
+            logging.info("Thymio set variable %s", str(var))
+            if self.node:
+                aw(self.node.lock())
+                aw(self.node.set_variables(assignments))
+
     def aseba_program(self) -> str:
         """Aesl program."""
         resource = files("poppy.raspi_thymio.aesl").joinpath("poppy-raspi-thymio.aesl")
