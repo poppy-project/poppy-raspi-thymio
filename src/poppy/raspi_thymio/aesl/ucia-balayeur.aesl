@@ -13,9 +13,17 @@ var QspR[7]  # = [ 0,0,0,0 ] ##!< [out] motor speed R
 var Qpc = 0                    ##!< [out] program counter
 var Qnx = 0                    ##!< [out] next pc
 
-var base = 50	 # base speed
+var base = 60	 # base speed
 var speed = 0
 var black = 300
+var lost = 0
+var lost_turn[2] = [200,  -350]
+var lost_phase
+
+var state = 0  # 0 = follow track; 1 = searching; 2 = tracking az; 3 = tracking el
+var searching = 0
+var tracking_kind
+var tracking_ticks = 0
 
 call math.fill(Qid, 0)
 call math.fill(Qtime,0)
@@ -28,23 +36,106 @@ mic.threshold = 12
 
 sub doit
 	# -- specialized: add default behavior here
+	if state == 0 then
+		callsub state0_follow_track
+	elseif state == 1 then
+		# searching for the target
+		callsub state1_searching
+	elseif state == 2 then
+		# found target, tracking az
+		callsub state2_tracking_az
+	elseif state == 3 then
+		# tracked az, tracking el
+		callsub state3_tracking_el
+	elseif state == 4 then
+		# wait to retrace
+		callsub state4_retrace
+	end
+
+# Following
+
+sub state0_follow_track
 	if speed > 0 then
 		if  prox.ground.delta[0] < black and prox.ground.delta[1] < black then
 			motor.left.target = speed
 			motor.right.target = speed
+			lost = 0
 		elseif  prox.ground.delta[0] < black and prox.ground.delta[1] >= black then
 			motor.left.target = speed
 			motor.right.target = 4 * speed
+			lost = 0
 		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] < black then
 			motor.left.target = 4 * speed
 			motor.right.target = speed
+			lost = 0
 		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] >= black then
-			tmp[0:3] = [6,120,137,-137]
-			callsub motion_add
+			lost = lost + 1
+			if  lost > 400 then
+				callsub do_stop
+			end
+			lost_phase = (lost / 100) % 2
+			motor.left.target = lost_turn[lost_phase]
+			motor.right.target = lost_turn[1 - lost_phase]
+			# tmp[0:3] = [6,120,137,-137]
+			# callsub motion_add
 		end
 	else
 		motor.left.target = 0
 		motor.right.target = 0
+	end
+	leds.bottom.left = [0, 0,0]
+	leds.bottom.right = [0, 0, 0]
+
+
+# Tracking
+
+sub state1_searching
+	# searching for the target
+	searching = searching + 1
+	motor.left.target = 70 * ((((searching / 1000) % 2) * -2) + 1)
+	motor.right.target = - motor.left.target
+	leds.bottom.left = [0, 0, ((motor.right.target / 70) + 1) * 100]
+	leds.bottom.right = [0, 0, ((motor.left.target / 70) + 1) * 100]
+	if camera.thing[tracking_kind * 4] > 20 then
+		state = 2
+	end
+
+sub state2_tracking_az
+	# found target, tracking az
+	if abs(camera.thing[tracking_kind * 4 + 2]) < 20 then
+		state = 3
+		tracking_ticks = 0
+		motor.left.target = 0
+		motor.right.target = 0
+	else
+		# continue turning, don't change motors
+	end
+	leds.bottom.left = [200, 200,0]
+	leds.bottom.right = [200, 200, 0]
+
+sub state3_tracking_el
+	# tracked az, tracking el
+	tracking_ticks = tracking_ticks + 1
+	if abs(camera.thing[tracking_kind * 4 + 3]) < 10 then
+		tmp[0:3] = [10,133,-192,-192]  # 80 mm
+		callsub motion_add
+		tmp[0:3] = [11, 2*180, 137,-137]  # 180 degrees
+		callsub motion_add
+		tracking_ticks = (tracking_ticks / 2) - 120
+		tmp[0:3] = [12, tracking_ticks, 140, 140]  # retrace steps
+		callsub motion_add
+		state = 4
+	else
+		motor.left.target = 70
+		motor.right.target = 70
+	end
+	leds.bottom.left = [0, 200,0]
+	leds.bottom.right = [0, 200, 0]
+
+sub state4_retrace
+	# wait for return
+	if Qnx == Qpc then
+		state = 0
 	end
 
 # Inputs
@@ -60,15 +151,26 @@ onevent rc5
 # -- specialized
 onevent camera.detect
 	# -- specialized: add detection here
-	if (event.args[0] >=1 and event.args[0] <= 6) or event.args[0] == 11 or event.args[0] == 13 then
+	if event.args[0] == 1
+			or (event.args[0] >=3 and event.args[0] <= 6) 
+			or event.args[0] == 11 or event.args[0] == 13 then
 		# thing
 		if event.args[4] < 150 then
 			callsub do_sweep
+		end
+	elseif event.args[0] == 2 or event.args[0] == 10 then
+		# nest or target
+		if state == 1 then
+			# state = 2
+			tracking_kind = event.args[0]
 		end
 	elseif speed > 0 then
 		if event.args[0] == 7 or event.args[0] == 8 then
 			# turn ahead
 			callsub do_normal
+		elseif event.args[0] == 9 and speed <= 200 then
+			# straightaway
+			callsub do_faster
 		elseif event.args[0] == 12 then
 			# stop sign
 			callsub do_long_stop
@@ -84,11 +186,14 @@ onevent camera.detect
 # commands
 sub do_command
 	# -- standard
-	call sound.system(0)
 	if event.args[0] == 87 then # stop
+		call sound.system(1)
 		callsub do_stop
+		state = 0
 	elseif event.args[0] == 53 then # go
+		call sound.system(0)
 		callsub do_normal
+		state = 0
 	elseif event.args[0] == 0 then # 0 = sweep
 		callsub do_sweep
 	elseif event.args[0] == 80 then # forward
@@ -103,10 +208,27 @@ sub do_command
 		callsub do_faster
 	elseif event.args[0] == 17 then # minus
 		callsub do_normal
+	# -- poweroff
+	elseif event.args[0] == 8 then
+		call _poweroff()
 	# -- specialized: add commands here
-	elseif event.args[0] == 1 then # 1 = stop sign
+	elseif event.args[0] == 1 then # 1 = state 1
+		state = 1
+		searching = 0
+		camera.thing[8:11] = [0, 0, 0,0]
+	elseif event.args[0] == 2 then # 2 = state 2
+		# state = 2
+		tracking_kind = 2
+		camera.thing[8:11] = [90, 0, 100,100]
+	elseif event.args[0] == 3 then # 3 = state 3
+		# state = 3
+		camera.thing[8:11] = [90, 0, 0,100]
+	elseif event.args[0] == 4 then # 4 = state 4
+		# state = 4
+		camera.thing[8:11] = [90, 0, 0,9]
+	elseif event.args[0] == 7 then # 7 = stop sign
 		callsub do_long_stop
-	elseif event.args[0] == 2 then # 2 = zebra
+	elseif event.args[0] == 9 then # 9 = zebra
 		callsub do_short_stop
 	end
 
@@ -116,11 +238,14 @@ sub do_stop
 
 sub do_normal
 	speed = base
-
-sub do_forward
 	call sound.system(2)
 	motor.left.target = speed
 	motor.right.target = speed
+	lost = 0
+
+sub do_forward
+	tmp[0:3] = [3, 100, 128, 128]  # 40 mm
+	callsub motion_add
 
 sub do_backward
 	tmp[0:3] = [3, 100, -128,-128]  # 40 mm
@@ -136,13 +261,14 @@ sub do_left
 
 sub do_faster
 	speed = speed * 12 / 10
+	call math.clamp(speed, speed, 0, 150)
 
 sub do_sweep
-	tmp[0:3] = [1,100,128,128]  # 40 mm
+	tmp[0:3] = [1,100,160,160]  # 50 mm
 	callsub motion_add
 	tmp[0:3] = [2,80,137,-137]  # 40 degrees
 	callsub motion_add
-	tmp[0:3] = [3,100,-128,-128]  # 40 mm
+	tmp[0:3] = [3,100,-160,-160]  # 50 mm
 	callsub motion_add
 	tmp[0:3] = [4,80,-137,137]  # 40 degrees
 	callsub motion_add
@@ -190,18 +316,27 @@ if Qtime[Qpc] == 0 and Qpc != Qnx then
 	# scan forward in the queue
 	Qpc = (Qpc+1)%7
 end
-call math.fill(tmp,0)
-tmp[Qnx]=1
-tmp[Qpc]=4
-call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
+callsub update_leds
+# if queue is empty do behavior
 if Qnx == Qpc then
 	callsub doit
+end
+
+sub update_leds
 	if  speed == 0 then
 		leds.top = [200,0,0]
 	else
 		leds.top = [0,200,0]
 	end
-end
+	# leds.buttons show queue
+	call math.fill(tmp,0)
+	tmp[Qnx]=1
+	tmp[Qpc]=4
+	call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
+	# leds.circle show speed
+	call math.div(tmp[0:4],  [speed,speed,speed,speed,speed],  [60,72,86,103,123])
+	call math.clamp(tmp[0:4],  tmp[0:4],  [0,0,0,0,0],  [1,1,1,1,1])
+	call math.mul(leds.circle[0:4],  tmp[0:4],  [30,30,30,30,30])
 
 ##! @brief Subroutine to add a task to the queue
 ##! @private
