@@ -1,0 +1,244 @@
+var tmp[9]
+
+var _camera.heartbeat = 50
+var camera.detect[5] = [0, 0, 0, 0, 0]
+var camera.thing[60]
+
+# Constant QUEUE = 7
+
+var Qid[7]   # = [ 0,0,0,0 ] ##!< [out] task id
+var Qtime[7] # = [ 0,0,0,0 ] ##!< [out] remaining time
+var QspL[7]  # = [ 0,0,0,0 ] ##!< [out] motor speed L
+var QspR[7]  # = [ 0,0,0,0 ] ##!< [out] motor speed R
+var Qpc = 0                    ##!< [out] program counter
+var Qnx = 0                    ##!< [out] next pc
+
+var base = 50	 # base speed
+var speed = 0
+var black = 300
+
+call math.fill(Qid, 0)
+call math.fill(Qtime,0)
+call math.fill(QspL,0)
+call math.fill(QspR,0)
+
+mic.threshold = 12
+
+# Main event
+
+sub doit
+	# -- specialized: add default behavior here
+
+# Inputs
+
+onevent tap
+	event.args[0] = [87]
+	callsub do_command
+
+onevent rc5
+	event.args[0] = [rc5.command]
+	callsub do_command
+
+# -- specialized
+onevent camera.detect
+	# -- specialized: add detection here
+
+# commands
+sub do_command
+	# -- standard
+	call sound.system(0)
+	if event.args[0] == 87 then # stop
+		callsub do_stop
+	elseif event.args[0] == 53 then # go
+		callsub do_normal
+	elseif event.args[0] == 0 then # 0 = sweep
+		callsub do_sweep
+	elseif event.args[0] == 80 then # forward
+		callsub do_forward
+	elseif event.args[0] == 81 then # backward
+		callsub do_backward
+	elseif event.args[0] == 86 then # right
+		callsub do_right
+	elseif event.args[0] == 85 then # left
+		callsub do_left
+	elseif event.args[0] == 16 then # plus
+		callsub do_faster
+	elseif event.args[0] == 17 then # minus
+		callsub do_normal
+	# -- specialized: add commands here
+	end
+
+sub do_stop
+	callsub motion_reset
+	speed = 0
+
+sub do_normal
+	speed = base
+
+sub do_forward
+	call sound.system(2)
+	motor.left.target = speed
+	motor.right.target = speed
+
+sub do_backward
+	tmp[0:3] = [3,100,-128,-128]
+	callsub motion_add
+
+sub do_right
+	tmp[0:3] = [2,90,137,-137]
+	callsub motion_add
+
+sub do_left
+	tmp[0:3] = [2,90,-137,137]
+	callsub motion_add
+
+sub do_faster
+		speed = speed * 12 / 10
+
+sub do_sweep
+	tmp[0:3] = [1,100,128,128]
+	callsub motion_add
+	tmp[0:3] = [2,90,137,-137]
+	callsub motion_add
+	tmp[0:3] = [3,100,-128,-128]
+	callsub motion_add
+	tmp[0:3] = [4,90,-137,137]
+	callsub motion_add
+
+# -- specialized: add commands here
+
+# Standard
+
+# Motion queue
+
+onevent motor # loop runs at 100 Hz
+if Qtime[Qpc] > 0 then
+	# start new motion
+#	emit Q_motion_started([Qid[Qpc], Qtime[Qpc], QspL[Qpc], QspR[Qpc], Qpc])
+	Qtime[Qpc] = 0 - Qtime[Qpc] # mark as current by setting negative value
+end
+if Qtime[Qpc] < 0 then
+	# continue motion
+	leds.top = [180,180,0]
+	motor.left.target = QspL[Qpc]
+	motor.right.target = QspR[Qpc]
+	Qtime[Qpc] += 1
+	if Qtime[Qpc] == 0 then
+#		emit Q_motion_ended([Qid[Qpc], Qtime[Qpc], QspL[Qpc], QspR[Qpc], Qpc])
+		Qid[Qpc] = 0
+		Qpc = (Qpc+1)%7
+		if Qtime[Qpc] == 0 and Qpc == Qnx then
+#			emit Q_motion_noneleft([Qpc])
+			motor.left.target = 0
+			motor.right.target = 0
+		end
+	end
+end
+if Qtime[Qpc] == 0 and Qpc != Qnx then
+	# scan forward in the queue
+	Qpc = (Qpc+1)%7
+end
+call math.fill(tmp,0)
+tmp[Qnx]=1
+tmp[Qpc]=4
+call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
+if Qnx == Qpc then
+	callsub doit
+	if  speed == 0 then
+		leds.top = [200,0,0]
+	else
+		leds.top = [0,200,0]
+	end
+end
+
+##! @brief Subroutine to add a task to the queue
+##! @private
+##! @param Qid task id
+##! @param Qtime time in 100ths
+##! @param QspL left motor speed
+##! @param QspR right motor speed
+sub motion_add
+if (Qnx != Qpc or (Qnx == Qpc and Qtime[Qpc] == 0)) and Qid[0]!=tmp[0] and Qid[1]!=tmp[0] and Qid[2]!=tmp[0] and Qid[3]!=tmp[0] then
+	Qid[Qnx]   = tmp[0]
+	Qtime[Qnx] = tmp[1]
+	QspL[Qnx]  = tmp[2]
+	QspR[Qnx]  = tmp[3]
+#	emit Q_motion_added([Qid[Qnx], Qtime[Qnx], QspL[Qnx], QspR[Qnx], Qnx])
+	Qnx = (Qnx+1)%7
+# else silently ignore
+end
+
+##! @brief Subroutine to cancel a task from the queue
+##! @private
+##! @param Qid task id
+sub motion_cancel
+for tmp[1] in 1:7 do
+	if Qid[tmp[1]-1] == tmp[0] then
+#		emit Q_motion_cancelled([Qid[tmp[1]-1], Qtime[tmp[1]-1], QspL[tmp[1]-1], QspR[tmp[1]-1], tmp[1]-1])
+		Qtime[tmp[1]-1] = -1 # on next motor trigger Q_motion_ended, Q_motion_noneleft
+		# Qid[tmp[1]-1] = 0  # keep for Q_motion_ended, will be removed line 66
+	end
+end
+
+##! @}
+
+##! @defgroup Motion
+##! @brief Incoming events to change motion queue: @c Q_*
+##!
+##! The REST API provides events for sending requests to the motion queue.
+##! Note that the brief description line for each will be used as the Scratch block definition.
+##!
+##! Changes to the motion queue will be broadcast using events @c Q_motion_added,
+##! @c Q_motion_cancelled, @c Q_motion_started, @c Q_motion_ended, @c Q_motion_noneleft.
+##! @{
+
+##! Add a task to the motion queue
+##! @brief Q_add_motion job \%n for \%n csec, left \%n right \%n
+##! @param Qid task id
+##! @param Qtime time in 100ths
+##! @param QspL left motor speed
+##! @param QspR right motor speed
+onevent Q_add_motion
+tmp[0:3] = event.args[0:3]
+callsub motion_add
+
+##! Cancel a task in the motion queue
+##! @brief Q_cancel_motion job \%n
+##! @param Qid task id
+onevent Q_cancel_motion
+tmp[0] = event.args[0]
+callsub motion_cancel
+
+##! Reset the queue and stop motors
+##!  @brief Q_reset
+onevent Q_reset
+callsub motion_reset
+
+sub motion_reset
+call math.fill(Qid,0)
+call math.fill(Qtime,0)
+call math.fill(QspL,0)
+call math.fill(QspR,0)
+call math.fill(Qpc,0)
+call math.fill(Qnx,0)
+motor.left.target = 0
+motor.right.target = 0
+# emit Q_motion_noneleft([Qpc])
+
+##! Play a system sound
+##! @brief A_sound_system \%n
+##! @param sound system sound number
+onevent A_sound_system
+call sound.system(event.args[0])
+
+##! Run the left motor
+##! @brief M_motor_left \%n
+##! @param speed
+onevent M_motor_left
+motor.left.target = event.args[0]
+
+##! Run the right motor
+##! @brief M_motor_right \%n
+##! @param speed
+onevent M_motor_right
+motor.right.target = event.args[0]

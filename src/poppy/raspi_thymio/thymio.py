@@ -31,7 +31,7 @@ class Thymio:
 
         self.node = aw(self.client.wait_for_node())
 
-    def start(self) -> None:
+    def start(self, program=None) -> None:
         """
         Register events and program with a Thymio.
         """
@@ -39,11 +39,21 @@ class Thymio:
             aw(self.node.lock())
             aw(
                 self.node.register_events(
-                    [("camera.detect", 5), ("camera.thing", 60), ("camera.best", 12), ("camera.lane", 3)]
+                    [
+                        ("camera.detect", 5),
+                        ("camera.thing", 60),
+                        ("camera.lane", 3),
+                        ("A_sound_system", 1),
+                        ("M_motor_left", 1),
+                        ("M_motor_right", 1),
+                        ("Q_add_motion", 4),
+                        ("Q_cancel_motion", 1),
+                        ("Q_reset", 0),
+                    ]
                 )
             )
-            aw(self.node.set_scratchpad(self.aseba_program()))
-            if (r := aw(self.node.compile(self.aseba_program()))) is None:
+            aw(self.node.set_scratchpad(self.aseba_program(program)))
+            if (r := aw(self.node.compile(self.aseba_program(program)))) is None:
                 self.run()
             else:
                 logging.warning("CAN'T RUN AESL: error %d", r)
@@ -78,9 +88,14 @@ class Thymio:
                 aw(self.node.lock())
                 aw(self.node.set_variables(assignments))
 
-    def aseba_program(self) -> str:
+    def aseba_program(self, program=None) -> str:
         """Aesl program."""
-        resource = files("poppy.raspi_thymio.aesl").joinpath("poppy-raspi-thymio.aesl")
+        default = "ucia-default.aesl"
+        try:
+            resource = files("poppy.raspi_thymio.aesl").joinpath(program or default)
+        except FileNotFoundError:
+            resource = files("poppy.raspi_thymio.aesl").joinpath(default)
+
         with as_file(resource) as aesl, open(aesl, mode="r", encoding="UTF-8") as file:
             aseba_program = file.read()
 
