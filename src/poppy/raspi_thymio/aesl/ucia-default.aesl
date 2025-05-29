@@ -81,28 +81,28 @@ sub do_forward
 	motor.right.target = speed
 
 sub do_backward
-	tmp[0:3] = [3,100,-128,-128]
+	tmp[0:3] = [3, 100, -128,-128]  # 40 mm
 	callsub motion_add
 
 sub do_right
-	tmp[0:3] = [2,90,137,-137]
+	tmp[0:3] = [2, 2*20, 137,-137]  # 20 degrees
 	callsub motion_add
 
 sub do_left
-	tmp[0:3] = [2,90,-137,137]
+	tmp[0:3] = [2, 2 * 20, -137,137]  # 20 degrees
 	callsub motion_add
 
 sub do_faster
 		speed = speed * 12 / 10
 
 sub do_sweep
-	tmp[0:3] = [1,100,128,128]
+	tmp[0:3] = [1,100,128,128]  # 40 mm
 	callsub motion_add
-	tmp[0:3] = [2,90,137,-137]
+	tmp[0:3] = [2,80,137,-137]  # 40 degrees
 	callsub motion_add
-	tmp[0:3] = [3,100,-128,-128]
+	tmp[0:3] = [3,100,-128,-128]  # 40 mm
 	callsub motion_add
-	tmp[0:3] = [4,90,-137,137]
+	tmp[0:3] = [4,80,-137,137]  # 40 degrees
 	callsub motion_add
 
 # -- specialized: add commands here

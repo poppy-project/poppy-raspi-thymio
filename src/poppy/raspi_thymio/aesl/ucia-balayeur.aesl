@@ -28,20 +28,21 @@ mic.threshold = 12
 
 sub doit
 	# -- specialized: add default behavior here
-	if  prox.ground.delta[0] < black and prox.ground.delta[1] < black then
-		motor.left.target = speed
-		motor.right.target = speed
-	elseif  prox.ground.delta[0] < black and prox.ground.delta[1] >= black then
-		motor.left.target = speed
-		motor.right.target = 4 * speed
-	elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] < black then
-		motor.left.target = 4 * speed
-		motor.right.target = speed
-	elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] >= black then
-		tmp[0:3] = [6,120,137,-137]
-		callsub motion_add
+	if speed > 0 then
+		if  prox.ground.delta[0] < black and prox.ground.delta[1] < black then
+			motor.left.target = speed
+			motor.right.target = speed
+		elseif  prox.ground.delta[0] < black and prox.ground.delta[1] >= black then
+			motor.left.target = speed
+			motor.right.target = 4 * speed
+		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] < black then
+			motor.left.target = 4 * speed
+			motor.right.target = speed
+		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] >= black then
+			tmp[0:3] = [6,120,137,-137]
+			callsub motion_add
+		end
 	end
-
 # Inputs
 
 onevent tap
@@ -61,8 +62,10 @@ onevent camera.detect
 			callsub do_sweep
 		end
 	elseif event.args[0] == 7 or event.args[0] == 8 then
-		# turn
-		callsub do_normal
+		# turn ahead
+		if speed > 0 then
+			callsub do_normal
+		end
 	elseif event.args[0] == 12 then
 		# stop sign
 		callsub do_long_stop
@@ -116,28 +119,28 @@ sub do_forward
 	motor.right.target = speed
 
 sub do_backward
-	tmp[0:3] = [3,100,-128,-128]
+	tmp[0:3] = [3, 100, -128,-128]  # 40 mm
 	callsub motion_add
 
 sub do_right
-	tmp[0:3] = [2,90,137,-137]
+	tmp[0:3] = [2, 2*20, 137,-137]  # 20 degrees
 	callsub motion_add
 
 sub do_left
-	tmp[0:3] = [2,90,-137,137]
+	tmp[0:3] = [2, 2 * 20, -137,137]  # 20 degrees
 	callsub motion_add
 
 sub do_faster
 	speed = speed * 12 / 10
 
 sub do_sweep
-	tmp[0:3] = [1,100,128,128]
+	tmp[0:3] = [1,100,128,128]  # 40 mm
 	callsub motion_add
-	tmp[0:3] = [2,90,137,-137]
+	tmp[0:3] = [2,80,137,-137]  # 40 degrees
 	callsub motion_add
-	tmp[0:3] = [3,100,-128,-128]
+	tmp[0:3] = [3,100,-128,-128]  # 40 mm
 	callsub motion_add
-	tmp[0:3] = [4,90,-137,137]
+	tmp[0:3] = [4,80,-137,137]  # 40 degrees
 	callsub motion_add
 
 # -- specialized: add commands here
