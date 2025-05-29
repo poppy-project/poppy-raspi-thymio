@@ -42,7 +42,11 @@ sub doit
 			tmp[0:3] = [6,120,137,-137]
 			callsub motion_add
 		end
+	else
+		motor.left.target = 0
+		motor.right.target = 0
 	end
+
 # Inputs
 
 onevent tap
@@ -61,20 +65,20 @@ onevent camera.detect
 		if event.args[4] < 150 then
 			callsub do_sweep
 		end
-	elseif event.args[0] == 7 or event.args[0] == 8 then
-		# turn ahead
-		if speed > 0 then
+	elseif speed > 0 then
+		if event.args[0] == 7 or event.args[0] == 8 then
+			# turn ahead
 			callsub do_normal
+		elseif event.args[0] == 12 then
+			# stop sign
+			callsub do_long_stop
+		elseif event.args[0] == 14 then
+			# zebra sign
+			callsub do_short_stop
+		elseif event.args[0] == 0 then
+			# parking sign
+			callsub do_stop
 		end
-	elseif event.args[0] == 12 then
-		# stop sign
-		callsub do_long_stop
-	elseif event.args[0] == 14 then
-		# zebra sign
-		callsub do_short_stop
-	elseif event.args[0] == 0 then
-		# parking sign
-		callsub do_stop
 	end
 
 # commands
@@ -107,8 +111,8 @@ sub do_command
 	end
 
 sub do_stop
-	callsub motion_reset
 	speed = 0
+	callsub motion_reset
 
 sub do_normal
 	speed = base
@@ -263,14 +267,14 @@ onevent Q_reset
 callsub motion_reset
 
 sub motion_reset
+motor.left.target = 0
+motor.right.target = 0
 call math.fill(Qid,0)
 call math.fill(Qtime,0)
 call math.fill(QspL,0)
 call math.fill(QspR,0)
 call math.fill(Qpc,0)
 call math.fill(Qnx,0)
-motor.left.target = 0
-motor.right.target = 0
 # emit Q_motion_noneleft([Qpc])
 
 ##! Play a system sound

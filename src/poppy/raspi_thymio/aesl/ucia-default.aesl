@@ -215,14 +215,14 @@ onevent Q_reset
 callsub motion_reset
 
 sub motion_reset
-call math.fill(Qid,0)
+motor.left.target = 0
+motor.right.target = 0
+ call math.fill(Qid,0)
 call math.fill(Qtime,0)
 call math.fill(QspL,0)
 call math.fill(QspR,0)
 call math.fill(Qpc,0)
 call math.fill(Qnx,0)
-motor.left.target = 0
-motor.right.target = 0
 # emit Q_motion_noneleft([Qpc])
 
 ##! Play a system sound
