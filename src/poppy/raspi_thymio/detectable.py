@@ -6,12 +6,9 @@ Base class for features that can be detected
 
 import colorsys
 import logging
-import sys
-from dataclasses import dataclass
 from enum import Enum, IntEnum
 from functools import cached_property, total_ordering
 from itertools import chain, groupby
-from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -193,4 +190,4 @@ class DetectableList(List[Detectable]):
         return result
 
     def __str__(self) -> str:
-        return f"DetectableList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"
+        return f"DetectableList<{hex(id(self))}({', '.join(str(t) for t in self)})>"

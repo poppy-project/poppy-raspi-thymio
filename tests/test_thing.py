@@ -2,14 +2,13 @@
 
 import base64
 import json
-import logging
 from pathlib import Path
 
 from pytest import approx
 from pytest_bdd import given, parsers, scenario, then, when
 
 from poppy.raspi_thymio.frame import Frame
-from poppy.raspi_thymio.thing import Thing, ThingKind, ThingList
+from poppy.raspi_thymio.thing import ThingKind, ThingList
 
 
 @scenario("thing.feature", "Find all Things")

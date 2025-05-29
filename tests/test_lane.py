@@ -1,13 +1,12 @@
 """Lane feature tests."""
 
-import logging
 from pathlib import Path
 
 from pytest import approx
 from pytest_bdd import given, parsers, scenario, then, when
 
 from poppy.raspi_thymio.frame import Frame
-from poppy.raspi_thymio.lane import Lane, LaneKind, LaneList
+from poppy.raspi_thymio.lane import LaneKind, LaneList
 
 
 @scenario("lane.feature", "Lane detection")

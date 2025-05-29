@@ -4,11 +4,9 @@
 Things that can be detected.
 """
 
-import colorsys
 import logging
 import os
 from enum import IntEnum
-from functools import cached_property
 from pathlib import Path
 from typing import List, Tuple
 
@@ -37,6 +35,7 @@ class ThingKind(IntEnum):
     Triangle = 13
     Zebra = 14
     Other = 15
+
 
 class Thing(Detectable):
     """
@@ -125,7 +124,7 @@ class ThingList(DetectableList[Thing]):
             for class_id, confidence, xyxy in zip(
                 (ThingKind(int(i)) for i in boxes.cls), boxes.conf, boxes.xyxy
             ):
-                label = f"{class_id.name} {confidence:3.2f}"
+                # label = f"{class_id.name} {confidence:3.2f}"
                 # Bounding box and center
                 x1, y1, x2, y2 = (coords := xyxy.numpy().astype(int))
                 if (
@@ -166,7 +165,12 @@ class ThingList(DetectableList[Thing]):
             for obj in self
             if obj.kind == k and obj.target
         }
-        return [i for k in ThingKind for i in best.get(k, [0, 0, 0, 0]) if k < ThingKind.Other]
+        return [
+            i
+            for k in ThingKind
+            for i in best.get(k, [0, 0, 0, 0])
+            if k < ThingKind.Other
+        ]
 
     def __str__(self) -> str:
-        return f"ThingList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"
+        return f"ThingList<{hex(id(self))}({', '.join(str(t) for t in self)})>"

@@ -6,14 +6,11 @@ Control loop.
 
 import json
 import logging
-import signal
 import threading
 from pathlib import Path
-from typing import Tuple
 
 from .frame import Frame
-from .lane import Lane, LaneKind, LaneList
-from .thing import Thing, ThingKind, ThingList
+from .thing import ThingKind, ThingList
 from .thymio import Thymio
 
 # Control thread
@@ -32,7 +29,7 @@ class Control(threading.Thread):
         frame_dir: Path,
         freq_hz=60,
         # detectables=[ThingList(), LaneList()]
-        detectables=[ThingList()]
+        detectables=[ThingList()],
     ):
         threading.Thread.__init__(self)
         self.sleep_event = threading.Event()
@@ -100,8 +97,8 @@ class Control(threading.Thread):
         # Send Thymio events.
         for objects in self.detectables:
             name = type(objects[0] if objects else objects).__name__.lower()
-            self.thymio.events({f"camera.{ name }": (e := objects.event())})
-            logging.debug(f"Send event camera.{ name } %s", str(e))
+            self.thymio.events({f"camera.{name}": (e := objects.event())})
+            logging.debug(f"Send event camera.{name} %s", str(e))
 
         # self.thymio.events({"camera.lane": (e := self.lanes.event())})
         # logging.debug("Send event camera.lane %s", str(e))
@@ -120,6 +117,6 @@ class Control(threading.Thread):
             for thing in objects:
                 v = thing.event()  # conf color az el
                 base = thing.kind * 4
-                values[base:base + len(v)] = v
+                values[base:(base + len(v))] = v
         self.thymio.variables({"camera.thing": values})
         logging.debug("Set variable camera.thing %s", str(e))

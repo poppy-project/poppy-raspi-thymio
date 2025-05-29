@@ -17,7 +17,6 @@ Why does this file exist, and why not put this in __main__?
 
 import logging
 import os
-import signal
 from pathlib import Path
 
 import click

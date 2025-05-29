@@ -124,7 +124,7 @@ class Frame:
         cx, cy = center
 
         rgb = (
-            np.array(self.color)[cy - 7 : cy + 7, cx - 7 : cx + 7]
+            np.array(self.color)[(cy - 7):(cy + 7), (cx - 7):(cx + 7)]
             .mean(axis=0)
             .mean(axis=0)
             .astype(int)
