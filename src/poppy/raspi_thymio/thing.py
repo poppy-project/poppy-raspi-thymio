@@ -19,21 +19,21 @@ from .self_type import Self
 
 
 class ThingKind(IntEnum):
-    Parking = 0
-    Balle = 1
-    Cible = 2
-    Cube = 3
-    Cylindre = 4
-    Hexagone = 5
-    Home = 6
-    Gauche = 7
-    Droite = 8
-    Voie = 9
-    Nid = 10
-    Etoile = 11
-    Stop = 12
-    Triangle = 13
-    Zebra = 14
+    Parking = 0   # V3 native 0
+    Zebra = 1     # V3 native 14
+    Stop = 2      # V3 native 12
+    Balle = 3     # V3 native 1
+    Cube = 4      # V3 native 3
+    Cylindre = 5  # V3 native 4
+    Hexagone = 6  # V3 native 5
+    Home = 7      # V3 native 6
+    Etoile = 8    # V3 native 11
+    Triangle = 9  # V3 native 13
+    Cible = 10    # V3 native 2
+    Nid = 11      # V3 native 10
+    Gauche = 12   # V3 native 7
+    Droite = 13   # V3 native 8
+    Voie = 14     # V3 native 9
     Other = 15
 
 
@@ -97,6 +97,8 @@ class ThingList(DetectableList[Thing]):
     yolo = YOLO(yolo_weights, task="detect", verbose=False)
     logging.info("Loaded YOLO model")
 
+    kind_remap = [0, 3, 10, 4, 5, 6, 7, 12, 13, 14, 11, 8, 2, 9, 1]
+
     @classmethod
     def detect(cls, frame: Frame) -> Self:
         """
@@ -143,7 +145,7 @@ class ThingList(DetectableList[Thing]):
 
                 thing = Thing(
                     xyxy=np.array((x1, y2, x2, y1)),
-                    kind=class_id,
+                    kind=ThingKind(cls.kind_remap[class_id]),
                     confidence=confidence,
                 )
                 thing.color = frame.center_color(thing.center)

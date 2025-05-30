@@ -37,9 +37,9 @@ Feature: Thing
 
     Examples:
     | image       | balls | cubes | stars |
-    | ball01.jpeg | W3siY2xhc3MiOjEsImNvbmYiOjkyLCJjb2xvciI6NiwiYXoiOjE1LCJlbCI6MTg4LCJ4eXh5IjpbMjkyLDUzNSwzNTgsNDY3XSwicmdiIjpbNjAsNzAsNzRdLCJuYW1lIjoiQmFsbGUiLCJsYWJlbCI6IkJhbGxlIDAuOTIifV0= | None | None |
-    | cube01.jpeg | None | W3siY2xhc3MiOjMsImNvbmYiOjk1LCJjb2xvciI6NiwiYXoiOjI1LCJlbCI6MzU0LCJ4eXh5IjpbMjk3LDQ1MSwzNTksMzc2XSwicmdiIjpbNTUsNjgsNzJdLCJuYW1lIjoiQ3ViZSIsImxhYmVsIjoiQ3ViZSAwLjk1In1d | None |
-    | star01.jpeg | None | None | W3siY2xhc3MiOjExLCJjb25mIjo4MiwiY29sb3IiOjcsImF6IjotNCwiZWwiOjMzOCwieHl4eSI6WzI5Miw0NDksMzQ4LDM5NV0sInJnYiI6WzAsNDgsMTY4XSwibmFtZSI6IkV0b2lsZSIsImxhYmVsIjoiRXRvaWxlIDAuODIifV0= |
-    # | ball01.jpeg | '[{"class":1,"conf":92,"color":6,"az":15,"el":188,"xyxy":[292,535,358,467],"rgb":[60,70,74],"name":"Ball","label":"Balle 0.92"}]' | None | None |
-    # | cube01.jpeg | None | '[{"class":3,"conf":95,"color":6,"az":25,"el":354,"xyxy":[297,451,359,376],"rgb":[55,68,72],"name":"Cube","label":"Cube 0.95"}]' | None |
-    # | star01.jpeg | None | None | '[{"class":11,"conf":82,"color":7,"az":-4,"el":338,"xyxy":[292,449,348,395],"rgb":[0,48,168],"name":"Etoile","label":"Etoile 0.82"}]' |
+    | ball01.jpeg | W3siY2xhc3MiOjMsImNvbmYiOjkyLCJjb2xvciI6NiwiYXoiOjE1LCJlbCI6MTg4LCJ4eXh5IjpbMjkyLDUzNSwzNTgsNDY3XSwicmdiIjpbNjAsNzAsNzRdLCJuYW1lIjoiQmFsbGUiLCJsYWJlbCI6IkJhbGxlIDAuOTIifV0K | None | None |
+    | cube01.jpeg | None | W3siY2xhc3MiOjQsImNvbmYiOjk1LCJjb2xvciI6NiwiYXoiOjI1LCJlbCI6MzU0LCJ4eXh5IjpbMjk3LDQ1MSwzNTksMzc2XSwicmdiIjpbNTUsNjgsNzJdLCJuYW1lIjoiQ3ViZSIsImxhYmVsIjoiQ3ViZSAwLjk1In1dCg== | None |
+    | star01.jpeg | None | None | W3siY2xhc3MiOjgsImNvbmYiOjgyLCJjb2xvciI6NywiYXoiOi00LCJlbCI6MzM4LCJ4eXh5IjpbMjkyLDQ0OSwzNDgsMzk1XSwicmdiIjpbMCw0OCwxNjhdLCJuYW1lIjoiRXRvaWxlIiwibGFiZWwiOiJFdG9pbGUgMC44MiJ9XQo= |
+    # | ball01.jpeg | '[{"class":3,"conf":92,"color":6,"az":15,"el":188,"xyxy":[292,535,358,467],"rgb":[60,70,74],"name":"Balle","label":"Balle 0.92"}]' | None | None |
+    # | cube01.jpeg | None | '[{"class":4,"conf":95,"color":6,"az":25,"el":354,"xyxy":[297,451,359,376],"rgb":[55,68,72],"name":"Cube","label":"Cube 0.95"}]' | None |
+    # | star01.jpeg | None | None | '[{"class":8,"conf":82,"color":7,"az":-4,"el":338,"xyxy":[292,449,348,395],"rgb":[0,48,168],"name":"Etoile","label":"Etoile 0.82"}]' |
