@@ -1,4 +1,5 @@
 var tmp[9]
+var i
 
 var _camera.heartbeat = 50
 var camera.detect[5] = [0, 0, 0, 0, 0]
@@ -13,7 +14,7 @@ var QspR[7]  # = [ 0,0,0,0 ] ##!< [out] motor speed R
 var Qpc = 0                    ##!< [out] program counter
 var Qnx = 0                    ##!< [out] next pc
 
-var base = 60	 # base speed
+var base = 500	 # base speed
 var speed = 0
 var black = 300
 var lost = 0
@@ -37,6 +38,7 @@ mic.threshold = 12
 sub doit
 	# -- specialized: add default behavior here
 	if state == 0 then
+		callsub camera_detect
 		callsub state0_follow_track
 	elseif state == 1 then
 		# searching for the target
@@ -57,16 +59,16 @@ sub doit
 sub state0_follow_track
 	if speed > 0 then
 		if  prox.ground.delta[0] < black and prox.ground.delta[1] < black then
-			motor.left.target = speed
-			motor.right.target = speed
+			motor.left.target = speed / 10
+			motor.right.target = speed / 10
 			lost = 0
 		elseif  prox.ground.delta[0] < black and prox.ground.delta[1] >= black then
-			motor.left.target = speed
-			motor.right.target = 4 * speed
+			motor.left.target = speed / 10
+			motor.right.target = 6 * (speed / 10)
 			lost = 0
 		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] < black then
-			motor.left.target = 4 * speed
-			motor.right.target = speed
+			motor.left.target = 6 * (speed / 10)
+			motor.right.target = speed / 10
 			lost = 0
 		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] >= black then
 			lost = lost + 1
@@ -124,6 +126,7 @@ sub state3_tracking_el
 		tracking_ticks = (tracking_ticks / 2) - 120
 		tmp[0:3] = [12, tracking_ticks, 140, 140]  # retrace steps
 		callsub motion_add
+		tracking_kind = 0
 		state = 4
 	else
 		motor.left.target = 70
@@ -150,36 +153,57 @@ onevent rc5
 
 # -- specialized
 onevent camera.detect
+	_camera.heartbeat = 50 + (((_camera.heartbeat % 10) + 1) % 7)
+	call leds.temperature(0, 4 - abs((_camera.heartbeat % 10) % 7 - 3))
+
+sub camera_detect
 	# -- specialized: add detection here
-	if event.args[0] == 1
-			or (event.args[0] >=3 and event.args[0] <= 6) 
-			or event.args[0] == 11 or event.args[0] == 13 then
+	for i in 3:9 do
 		# thing
-		if event.args[4] < 150 then
-			callsub do_sweep
+		call sound.system(4)
+		if camera.thing[i*4] > 50 and abs(camera.thing[i*4 + 2]) < 700 then
+			if abs(camera.thing[i*4 + 2]) < 150 and camera.thing[i*4 + 3] < 150 then
+				callsub do_normal
+				callsub do_sweep
+				camera.thing[i*4] = 0
+				# leds.circle[6:7] = [32,32]
+				return
+			elseif camera.thing[i*4 + 2] > 200
+				and camera.thing[i*4 + 3] < 300
+				and speed > 0 then
+				callsub do_trim_right
+			elseif camera.thing[i*4 + 2] < -200
+				and camera.thing[i*4 + 3] < 300
+				and speed > 0 then
+				callsub do_trim_left
+			end
 		end
-	elseif event.args[0] == 2 or event.args[0] == 10 then
-		# nest or target
-		if state == 1 then
-			# state = 2
-			tracking_kind = event.args[0]
+	end
+	for i in 10:11 do
+		if camera.thing[i*4] > 50 and state == 1 and tracking_kind == 0 then
+			tracking_kind = i
+			return
 		end
-	elseif speed > 0 then
-		if event.args[0] == 7 or event.args[0] == 8 then
-			# turn ahead
-			callsub do_normal
-		elseif event.args[0] == 9 and speed <= 200 then
+	end
+	if speed > 0 then
+		if camera.thing[14*4] > 50 and speed < 2000 then
 			# straightaway
+			motor.right.target = motor.left.target
 			callsub do_faster
-		elseif event.args[0] == 12 then
+		elseif camera.thing[12*4] + camera.thing[13*4] > 50 then
+			# turn ahead
+			callsub do_slow
+		elseif camera.thing[2*4] > 50 and camera.thing[2*4 + 3] < 500 and camera.thing[2*4 + 3] < 150 then
 			# stop sign
 			callsub do_long_stop
-		elseif event.args[0] == 14 then
+		elseif camera.thing[1*4] > 50 and camera.thing[1*4 + 3] < 500 and camera.thing[1*4 + 3] < 150 then
 			# zebra sign
 			callsub do_short_stop
-		elseif event.args[0] == 0 then
+		elseif camera.thing[0*4] > 50 and camera.thing[0*4 + 3] < 250 and abs(camera.thing[i*4 + 2]) < 300 then
 			# parking sign
 			callsub do_stop
+		else
+			leds.circle[5:6] = [0,0]
 		end
 	end
 
@@ -241,7 +265,16 @@ sub do_normal
 	call sound.system(2)
 	motor.left.target = speed
 	motor.right.target = speed
+	leds.bottom.left = [0, 0, 0]
+	leds.bottom.right = [0, 0, 0]
 	lost = 0
+
+sub do_slow
+	speed = base
+	call sound.system(2)
+	i = (motor.left.target * 100 / motor.right.target)
+	motor.right.target = (base * 200) / (i + 100)
+	motor.left.target = (base * 2) / (i + 100) * i
 
 sub do_forward
 	tmp[0:3] = [3, 100, 128, 128]  # 40 mm
@@ -260,17 +293,20 @@ sub do_left
 	callsub motion_add
 
 sub do_faster
-	speed = speed * 12 / 10
-	call math.clamp(speed, speed, 0, 150)
+	# speed = speed * 12 / 10
+	speed = speed + 1
+	call math.clamp(speed, speed, 0, 2000)
 
 sub do_sweep
-	tmp[0:3] = [1,100,160,160]  # 50 mm
+	tmp[0:3] = [1,100,128,128]  # 40 mm
 	callsub motion_add
-	tmp[0:3] = [2,80,137,-137]  # 40 degrees
+	tmp[0:3] = [2,60,137,-137]  # 30 degrees
 	callsub motion_add
-	tmp[0:3] = [3,100,-160,-160]  # 50 mm
+	tmp[0:3] = [3,100,-128,-128]  # 40 mm
 	callsub motion_add
-	tmp[0:3] = [4,80,-137,137]  # 40 degrees
+	tmp[0:3] = [4,60,-137,137]  # 30 degrees
+	callsub motion_add
+	tmp[0:3] = [5,60,0,0]  # wait 600 ms
 	callsub motion_add
 
 # -- specialized: add commands here
@@ -278,12 +314,24 @@ sub do_sweep
 sub do_long_stop
 	tmp[0:3] = [5,300,0,0]
 	callsub motion_add
-	speed = base
+	leds.bottom.left = [200, 0, 0]
+	leds.bottom.right = [200, 0, 0]
+	# speed = base
 
 sub do_short_stop
 	tmp[0:3] = [5,100,0,0]
 	callsub motion_add
-	speed = base
+	leds.bottom.left = [200, 0, 0]
+	leds.bottom.right = [200, 0, 0]
+	# speed = base
+
+sub do_trim_right
+	leds.circle[3:5] = [32,0,0]
+	motor.left.target = motor.left.target + ((abs(camera.thing[i*4+2]) - 200) / 1)
+
+sub do_trim_left
+	leds.circle[3:5] = [0,0,32]
+	motor.right.target = motor.right.target + ((abs(camera.thing[i*4+2]) - 200) / 1)
 
 # Standard
 
@@ -334,7 +382,8 @@ sub update_leds
 	tmp[Qpc]=4
 	call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
 	# leds.circle show speed
-	call math.div(tmp[0:4],  [speed,speed,speed,speed,speed],  [60,72,86,103,123])
+	# call math.div(tmp[0:4],  [speed,speed,speed,speed,speed],  [60,72,86,103,123])
+	call math.div(tmp[0:4],  [speed,speed,speed,speed,speed],  [700,1000,1300,1600,1900])
 	call math.clamp(tmp[0:4],  tmp[0:4],  [0,0,0,0,0],  [1,1,1,1,1])
 	call math.mul(leds.circle[0:4],  tmp[0:4],  [30,30,30,30,30])
 
