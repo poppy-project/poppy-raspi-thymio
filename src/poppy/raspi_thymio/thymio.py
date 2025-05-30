@@ -90,7 +90,7 @@ class Thymio:
 
     def aseba_program(self, program=None) -> str:
         """Aesl program."""
-        default = "ucia-default.aesl"
+        default = "ucia-balayeur.aesl"
         try:
             resource = files("poppy.raspi_thymio.aesl").joinpath(program or default)
         except FileNotFoundError:
