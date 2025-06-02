@@ -33,7 +33,7 @@ class Detectable:
         color: Tuple = (255, 255, 255),
         confidence: float = 1.0,
         target: bool = False,
-        ttl: int = 3,
+        ttl: int = 2,
     ) -> None:
         self.xyxy = xyxy
         self.kind = kind

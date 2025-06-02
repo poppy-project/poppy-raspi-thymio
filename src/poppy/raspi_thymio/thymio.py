@@ -43,6 +43,7 @@ class Thymio:
                         ("camera.detect", 5),
                         ("camera.thing", 60),
                         ("camera.lane", 3),
+                        ("command", 0),
                         ("A_sound_system", 1),
                         ("M_motor_left", 1),
                         ("M_motor_right", 1),

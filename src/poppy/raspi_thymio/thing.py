@@ -26,7 +26,7 @@ class ThingKind(IntEnum):
     Cube = 4      # V3 native 3
     Cylindre = 5  # V3 native 4
     Hexagone = 6  # V3 native 5
-    Home = 7      # V3 native 6
+    Maison = 7    # V3 native 6
     Etoile = 8    # V3 native 11
     Triangle = 9  # V3 native 13
     Cible = 10    # V3 native 2
@@ -61,7 +61,7 @@ class Thing(Detectable):
     @property
     def label(self) -> str:
         """Thing text label."""
-        return f"{self.kind.name} {self.kind} {self.confidence:3.2f}"
+        return f"{self.kind.name} {self.confidence:3.2f} {self.azel}"
 
     def event(self) -> List[List[int]]:
         """
