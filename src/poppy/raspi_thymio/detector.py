@@ -17,7 +17,6 @@ Why does this file exist, and why not put this in __main__?
 
 import logging
 import os
-import signal
 from pathlib import Path
 
 import click
@@ -64,8 +63,8 @@ def main(freq: float, fifo: Path, frame_dir: Path, verbose: bool, loglevel: str)
     Send JSON records to a FIFO and record image frames in files.
     """
     loglevel_int = getattr(logging, loglevel.upper(), logging.DEBUG)
-    logging.basicConfig(format="%(asctime)s %(message)s", level=logging.DEBUG)
-    logging.info("Setting loglevel to %s", loglevel)
+    logging.basicConfig(format="%(asctime)s %(message)s", level=loglevel_int)
+    logging.info("Setting loglevel to %s = %s", loglevel, str(loglevel_int))
 
     frame_dir.mkdir(mode=0o775, parents=True, exist_ok=True)
     if not fifo.is_fifo:

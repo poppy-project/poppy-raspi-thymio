@@ -1,0 +1,531 @@
+var tmp[9]
+var i
+
+var _camera.heartbeat = 50
+var camera.detect[5] = [0, 0, 0, 0, 0]
+var camera.thing[60]
+
+# Constant QUEUE = 7
+
+var Qid[7]       # task id
+var Qtime[7]     # remaining time
+var QspL[7]      # motor speed L
+var QspR[7]      # motor speed R
+var Qpc = 0      # program counter
+var Qnx = 0      # next pc
+
+var base = 500	 # base speed
+var speed = 0
+var black = 300
+var lost = 0
+var lost_turn[2] = [200,  -350]
+var lost_phase
+var track_turn
+
+var state = 0    # 0 = follow track; 1 = searching; 2 = tracking az; 3 = tracking el
+var scan[3] = [0,0,0]
+var tracking_kind
+var tracking_ticks = 0
+
+call math.fill(Qid, 0)
+call math.fill(Qtime,0)
+call math.fill(QspL,0)
+call math.fill(QspR,0)
+
+mic.threshold = 12
+
+# Main event
+
+sub doit
+	# -- specialized: add default behavior here
+	if state == 0 then
+		callsub camera_detect
+		callsub state0_follow_track
+	elseif state == 1 then
+		# searching for the target
+		callsub camera_detect
+		callsub state1_searching
+	elseif state == 2 then
+		# found target, tracking az
+		callsub camera_detect
+		callsub state2_tracking_az
+	elseif state == 3 then
+		# tracked az, tracking el
+		callsub state3_tracking_el
+	elseif state == 4 then
+		# wait to retrace
+		callsub state4_retrace
+	end
+
+# Following
+
+sub state0_follow_track
+	if speed > 0 then
+		if  prox.ground.delta[0] < black and prox.ground.delta[1] < black then
+			motor.left.target = speed / 10
+			motor.right.target = speed / 10
+			lost = 0
+		elseif  prox.ground.delta[0] < black and prox.ground.delta[1] >= black then
+			motor.left.target = speed / 10
+			motor.right.target = 6 * (speed / 10)
+			lost = 0
+		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] < black then
+			motor.left.target = 6 * (speed / 10)
+			motor.right.target = speed / 10
+			lost = 0
+		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] >= black then
+			lost = lost + 1
+			if  lost > 400 then
+				callsub do_stop
+			end
+			lost_phase = (lost / 100) % 2
+			motor.left.target = lost_turn[lost_phase]
+			motor.right.target = lost_turn[1 - lost_phase]
+			# tmp[0:3] = [6,120,137,-137]
+			# callsub motion_add
+		end
+	else
+		motor.left.target = 0
+		motor.right.target = 0
+	end
+	leds.bottom.left = [0, 0,0]
+	leds.bottom.right = [0, 0, 0]
+
+
+# Tracking
+
+sub state1_searching
+	# look for nest or target
+	for i in 10:11 do
+		if camera.thing[i * 4] > 20 then
+			callsub motion_reset
+
+			call sound.system(1)
+			tmp[0:3] = [11, 50,0,0]  # wait 500 ms
+			callsub motion_add
+
+			state = 2
+			leds.top = [100,0,200]
+			tracking_kind = i
+			return
+		end
+	end
+
+	# sweep right and left
+	call math.clamp(scan[1], (2 * abs((scan[0] % 16) - 7)) - 5, -1, 1)
+	scan[2] = scan[2] + (scan[1] * 60)
+	# tmp[0:3] = [10, 60, scan[1]*137, scan[1]*-137]  # +/- 30 degrees
+	# callsub motion_add
+	tmp[0:3] = [10, 20, scan[1]*120, scan[1]*-100]  # +/- 30 degrees
+	callsub motion_add
+	tmp[0:3] = [10, 28, scan[1]*150, scan[1]*-150]  # +/- 30 degrees
+	callsub motion_add
+	tmp[0:3] = [10, 20, scan[1]*120, scan[1]*-100]  # +/- 30 degrees
+	callsub motion_add
+	tmp[0:3] = [11, 100,0,0]  # wait 1000 ms, hope for detection
+	callsub motion_add
+
+	scan[0] = scan[0] + 1
+	leds.bottom.left = [0, 0, ((motor.right.target / i) + 1) * 100]
+	leds.bottom.right = [0, 0, ((motor.left.target / i) + 1) * 100]
+
+sub state2_tracking_az
+	# see nest or target, tracking az
+	if camera.thing[tracking_kind * 4] <= 20 then
+		state = 1
+		return
+	end
+	track_turn = camera.thing[tracking_kind * 4 + 2]
+	if abs(camera.thing[tracking_kind * 4 + 2]) < 80 then
+		state = 3
+		tracking_ticks = 0
+	else
+		# continue turning
+		track_turn = camera.thing[tracking_kind * 4 + 2] / 30
+		call math.clamp(i, track_turn, -1, 1)
+		tmp[0:3] = [20, track_turn, (i*137)+60, ((-i)*137)+60]
+		callsub motion_add
+		tmp[0:3] = [21, 70,0,0]  # wait, hope for detection
+		callsub motion_add
+	end
+	leds.bottom.left = [200, 200,0]
+	leds.bottom.right = [200, 200, 0]
+
+sub state3_tracking_el
+	# tracked az, tracking el
+	tracking_ticks = tracking_ticks + 1
+	if abs(camera.thing[tracking_kind * 4 + 3]) < 50 then
+		tmp[0:3] = [30, 133,-192,-192]  # 80 mm
+		callsub motion_add
+		tmp[0:3] = [31, 2*180, 137,-137]  # 180 degrees
+		callsub motion_add
+		tracking_ticks = (tracking_ticks / 2) - 120
+		tmp[0:3] = [32, tracking_ticks, 140, 140]  # retrace steps
+		callsub motion_add
+		tmp[0:3] = [33, scan[2], -137,137] # reorient
+		callsub motion_add
+		tmp[0:3] = [34, 70,0,0]  # wait
+		callsub motion_add
+		tracking_kind = 0
+		state = 4
+	else
+		motor.left.target = 70
+		motor.right.target = 70
+	end
+	leds.bottom.left = [0, 200,0]
+	leds.bottom.right = [0, 200, 0]
+
+sub state4_retrace
+	# wait for return
+	if Qnx == Qpc then
+		state = 0
+	end
+
+# Inputs
+
+onevent tap
+	event.args[0] = [87]
+	callsub do_command
+
+onevent rc5
+	event.args[0] = [rc5.command]
+	callsub do_command
+
+onevent command
+	callsub do_command
+
+# -- specialized
+onevent camera.detect
+	_camera.heartbeat = 50 + (((_camera.heartbeat % 10) + 1) % 7)
+	call leds.temperature(0, 4 - abs((_camera.heartbeat % 10) % 7 - 3))
+	if state > 0 then
+		callsub camera_detect
+	end
+
+sub camera_detect
+	# -- specialized: add detection here
+	for i in 3:9 do
+		# thing
+		if camera.thing[i*4] > 50 and abs(camera.thing[i*4 + 2]) < 700 then
+			if abs(camera.thing[i*4 + 2]) < 150 and camera.thing[i*4 + 3] < 150 then
+				callsub do_normal
+				callsub do_sweep
+				camera.thing[i*4] = 0
+				return
+			elseif camera.thing[i*4 + 2] > 200
+				and camera.thing[i*4 + 3] < 300
+				and speed > 0 then
+				callsub do_trim_right
+			elseif camera.thing[i*4 + 2] < -200
+				and camera.thing[i*4 + 3] < 300
+				and speed > 0 then
+				callsub do_trim_left
+			end
+		end
+	end
+	for i in 10:11 do
+		if camera.thing[i*4] > 20 and state == 1 and tracking_kind == 0 then
+			tracking_kind = i
+			callsub motion_reset
+			leds.top = [0,200,100]
+			state = 2
+			return
+		end
+	end
+	if speed > 0 then
+		if camera.thing[14*4] > 50 and speed < 2000 then
+			# straightaway
+			motor.right.target = motor.left.target
+			callsub do_faster
+		elseif camera.thing[12*4] + camera.thing[13*4] > 50 then
+			# turn ahead
+			callsub do_slow
+		elseif camera.thing[2*4] > 50 and camera.thing[2*4 + 3] < 500 and camera.thing[2*4 + 3] < 150 then
+			# stop sign
+			callsub do_long_stop
+		elseif camera.thing[1*4] > 50 and camera.thing[1*4 + 3] < 500 and camera.thing[1*4 + 3] < 150 then
+			# zebra sign
+			callsub do_short_stop
+		elseif camera.thing[0*4] > 50 and camera.thing[0*4 + 3] < 250 and abs(camera.thing[i*4 + 2]) < 300 then
+			# parking sign
+			callsub do_stop
+		else
+			leds.circle[5:6] = [0,0]
+		end
+	end
+
+# commands
+sub do_command
+	# -- standard
+	if event.args[0] == 87 then # stop
+		call sound.system(1)
+		callsub do_stop
+		state = 0
+	elseif event.args[0] == 53 then # go
+		call sound.system(0)
+		callsub do_normal
+		state = 0
+	elseif event.args[0] == 0 then # 0 = sweep
+		callsub do_sweep
+	elseif event.args[0] == 80 then # forward
+		callsub do_forward
+	elseif event.args[0] == 81 then # backward
+		callsub do_backward
+	elseif event.args[0] == 86 then # right
+		callsub do_right
+	elseif event.args[0] == 85 then # left
+		callsub do_left
+	elseif event.args[0] == 16 then # plus
+		callsub do_faster
+	elseif event.args[0] == 17 then # minus
+		callsub do_normal
+	# -- poweroff
+	elseif event.args[0] == 8 then
+		call _poweroff()
+	# -- specialized: add commands here
+	elseif event.args[0] == 1 then # 1 = state 1
+		state = 1
+		scan = [0,0,0]
+	elseif event.args[0] == 2 then # 2 = state 2
+		# state = 2
+		tracking_kind = 11
+	elseif event.args[0] == 3 then # 3 = state 3
+		# state = 3
+	elseif event.args[0] == 4 then # 4 = state 4
+		# state = 4
+	elseif event.args[0] == 5 then # 0 = sweep
+		callsub do_retrieve
+	elseif event.args[0] == 7 then # 7 = stop sign
+		callsub do_long_stop
+	elseif event.args[0] == 9 then # 9 = zebra
+		callsub do_short_stop
+	end
+
+sub do_stop
+	speed = 0
+	callsub motion_reset
+
+sub do_normal
+	speed = base
+	call sound.system(2)
+	motor.left.target = speed
+	motor.right.target = speed
+	leds.bottom.left = [0, 0, 0]
+	leds.bottom.right = [0, 0, 0]
+	lost = 0
+
+sub do_slow
+	speed = base
+	call sound.system(2)
+	i = (motor.left.target * 100 / motor.right.target)
+	motor.right.target = (base * 200) / (i + 100)
+	motor.left.target = (base * 2) / (i + 100) * i
+
+sub do_forward
+	tmp[0:3] = [3, 100, 128, 128]  # 40 mm
+	callsub motion_add
+
+sub do_backward
+	tmp[0:3] = [3, 100, -128,-128]  # 40 mm
+	callsub motion_add
+
+sub do_right
+	tmp[0:3] = [2, 2*20, 137,-137]  # 20 degrees
+	callsub motion_add
+
+sub do_left
+	tmp[0:3] = [2, 2 * 20, -137,137]  # 20 degrees
+	callsub motion_add
+
+sub do_faster
+	# speed = speed * 12 / 10
+	speed = speed + 1
+	call math.clamp(speed, speed, 0, 2000)
+
+sub do_sweep
+	tmp[0:3] = [1,100,128,128]  # 40 mm
+	callsub motion_add
+	tmp[0:3] = [2,60,137,-137]  # 30 degrees
+	callsub motion_add
+	tmp[0:3] = [3,100,-128,-128]  # 40 mm
+	callsub motion_add
+	tmp[0:3] = [4,60,-137,137]  # 30 degrees
+	callsub motion_add
+	tmp[0:3] = [5,60,0,0]  # wait 600 ms
+	callsub motion_add
+
+sub do_retrieve
+	tmp[0:3] = [6,100,128,128]  # 40 mm
+	callsub motion_add
+	scan = [0,0,0]
+	state = 1
+
+# -- specialized: add commands here
+
+sub do_long_stop
+	tmp[0:3] = [5,300,0,0]
+	callsub motion_add
+	leds.bottom.left = [200, 0, 0]
+	leds.bottom.right = [200, 0, 0]
+	# speed = base
+
+sub do_short_stop
+	tmp[0:3] = [5,100,0,0]
+	callsub motion_add
+	leds.bottom.left = [200, 0, 0]
+	leds.bottom.right = [200, 0, 0]
+	# speed = base
+
+sub do_trim_right
+	leds.circle[3:5] = [32,0,0]
+	motor.left.target = motor.left.target + ((abs(camera.thing[i*4+2]) - 200) / 1)
+
+sub do_trim_left
+	leds.circle[3:5] = [0,0,32]
+	motor.right.target = motor.right.target + ((abs(camera.thing[i*4+2]) - 200) / 1)
+
+# Standard
+
+# Motion queue
+
+onevent motor # loop runs at 100 Hz
+if Qtime[Qpc] > 0 then
+	# start new motion
+	Qtime[Qpc] = 0 - Qtime[Qpc] # mark as current by setting negative value
+end
+if Qtime[Qpc] < 0 then
+	# continue motion
+	leds.top = [180,180,0]
+	motor.left.target = QspL[Qpc]
+	motor.right.target = QspR[Qpc]
+	Qtime[Qpc] += 1
+	if Qtime[Qpc] == 0 then
+		Qid[Qpc] = 0
+		Qpc = (Qpc+1)%7
+		if Qtime[Qpc] == 0 and Qpc == Qnx then
+			motor.left.target = 0
+			motor.right.target = 0
+		end
+	end
+end
+if Qtime[Qpc] == 0 and Qpc != Qnx then
+	# scan forward in the queue
+	Qpc = (Qpc+1)%7
+end
+callsub run_clock
+callsub update_leds
+# if queue is empty do behavior
+if Qnx == Qpc then
+	callsub doit
+end
+
+sub update_leds
+	if  speed == 0 then
+		leds.top = [200,0,0]
+	else
+		leds.top = [0,200,0]
+	end
+	# leds.buttons show queue
+	call math.fill(tmp,0)
+	tmp[Qnx]=1
+	tmp[Qpc]=4
+	call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
+	# leds.circle show speed
+	call math.fill(leds.circle, 0)
+	leds.circle[(abs(speed - 400) / 300) % 8] = 20
+
+##! @brief Subroutine to add a task to the queue
+##! @private
+##! @param Qid task id
+##! @param Qtime time in 100ths
+##! @param QspL left motor speed
+##! @param QspR right motor speed
+sub motion_add
+if (Qnx != Qpc or (Qnx == Qpc and Qtime[Qpc] == 0)) and Qid[0]!=tmp[0] and Qid[1]!=tmp[0] and Qid[2]!=tmp[0] and Qid[3]!=tmp[0] then
+	Qid[Qnx]   = tmp[0]
+	Qtime[Qnx] = tmp[1]
+	QspL[Qnx]  = tmp[2]
+	QspR[Qnx]  = tmp[3]
+	Qnx = (Qnx+1)%7
+# else silently ignore
+end
+
+# ##! @brief Subroutine to cancel a task from the queue
+# ##! @private
+# ##! @param Qid task id
+# sub motion_cancel
+# for tmp[1] in 1:7 do
+# 	if Qid[tmp[1]-1] == tmp[0] then
+# #		emit Q_motion_cancelled([Qid[tmp[1]-1], Qtime[tmp[1]-1], QspL[tmp[1]-1], QspR[tmp[1]-1], tmp[1]-1])
+# 		Qtime[tmp[1]-1] = -1 # on next motor trigger Q_motion_ended, Q_motion_noneleft
+# 		# Qid[tmp[1]-1] = 0  # keep for Q_motion_ended, will be removed line 66
+# 	end
+# end
+
+##! @}
+
+##! @defgroup Motion
+##! @brief Incoming events to change motion queue: @c Q_*
+##!
+##! The REST API provides events for sending requests to the motion queue.
+##! Note that the brief description line for each will be used as the Scratch block definition.
+##!
+##! Changes to the motion queue will be broadcast using events @c Q_motion_added,
+##! @c Q_motion_cancelled, @c Q_motion_started, @c Q_motion_ended, @c Q_motion_noneleft.
+##! @{
+
+# ##! Add a task to the motion queue
+# ##! @brief Q_add_motion job \%n for \%n csec, left \%n right \%n
+# ##! @param Qid task id
+# ##! @param Qtime time in 100ths
+# ##! @param QspL left motor speed
+# ##! @param QspR right motor speed
+# onevent Q_add_motion
+# tmp[0:3] = event.args[0:3]
+# callsub motion_add
+
+# ##! Cancel a task in the motion queue
+# ##! @brief Q_cancel_motion job \%n
+# ##! @param Qid task id
+# onevent Q_cancel_motion
+# tmp[0] = event.args[0]
+# callsub motion_cancel
+
+# ##! Reset the queue and stop motors
+# ##!  @brief Q_reset
+# onevent Q_reset
+# callsub motion_reset
+
+sub motion_reset
+motor.left.target = 0
+motor.right.target = 0
+call math.fill(Qid,0)
+call math.fill(Qtime,0)
+call math.fill(QspL,0)
+call math.fill(QspR,0)
+call math.fill(Qpc,0)
+call math.fill(Qnx,0)
+
+# ##! Play a system sound
+# ##! @brief A_sound_system \%n
+# ##! @param sound system sound number
+# onevent A_sound_system
+# call sound.system(event.args[0])
+
+# ##! Run the left motor
+# ##! @brief M_motor_left \%n
+# ##! @param speed
+# onevent M_motor_left
+# motor.left.target = event.args[0]
+
+# ##! Run the right motor
+# ##! @brief M_motor_right \%n
+# ##! @param speed
+# onevent M_motor_right
+# motor.right.target = event.args[0]
+
+sub run_clock  # based on Qtime[Qpc]
+	call math.fill(leds.circle, 0)
+	if Qtime[Qpc] > 0 and motor.left.target == 0 and motor.right.target == 0 then
+		leds.circle[abs(Qtime[Qpc]/25) % 8] = 30
+	end

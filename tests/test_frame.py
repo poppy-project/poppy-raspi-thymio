@@ -7,7 +7,7 @@ from pytest_bdd import given, parsers, scenario, then, when
 
 import poppy.raspi_thymio.colors as colors
 from poppy.raspi_thymio.frame import Frame
-from poppy.raspi_thymio.lane import Lane, LaneKind
+from poppy.raspi_thymio.lane import Lane
 from poppy.raspi_thymio.thing import Thing, ThingKind
 
 
@@ -66,17 +66,23 @@ def _(xy):
 def _():
     """a set of things."""
     things = [
-        Thing(kind=ThingKind.Ball, xyxy=(21, 490, 72, 433), confidence=0.87),
+        Thing(kind=ThingKind.Balle, xyxy=(21, 490, 72, 433), confidence=0.87),
         Thing(
-            kind=ThingKind.Ball, xyxy=(292, 535, 358, 467), confidence=0.92, target=True
+            kind=ThingKind.Balle,
+            xyxy=(292, 535, 358, 467),
+            confidence=0.92,
+            target=True,
         ),
         Thing(kind=ThingKind.Cube, xyxy=(294, 392, 342, 332), confidence=0.90),
         Thing(
             kind=ThingKind.Cube, xyxy=(435, 458, 501, 383), confidence=0.91, target=True
         ),
-        Thing(kind=ThingKind.Star, xyxy=(524, 573, 599, 499), confidence=0.77),
+        Thing(kind=ThingKind.Etoile, xyxy=(524, 573, 599, 499), confidence=0.77),
         Thing(
-            kind=ThingKind.Star, xyxy=(152, 463, 210, 410), confidence=0.85, target=True
+            kind=ThingKind.Etoile,
+            xyxy=(152, 463, 210, 410),
+            confidence=0.85,
+            target=True,
         ),
     ]
     return things

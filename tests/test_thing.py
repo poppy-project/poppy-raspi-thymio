@@ -2,14 +2,13 @@
 
 import base64
 import json
-import logging
 from pathlib import Path
 
 from pytest import approx
 from pytest_bdd import given, parsers, scenario, then, when
 
 from poppy.raspi_thymio.frame import Frame
-from poppy.raspi_thymio.thing import Thing, ThingKind, ThingList
+from poppy.raspi_thymio.thing import ThingKind, ThingList
 
 
 @scenario("thing.feature", "Find all Things")
@@ -60,7 +59,7 @@ def _(things):
 @then(parsers.parse("format yields {balls:S} {cubes:S} {stars:S}"))
 def _(formatted, balls, cubes, stars):
     """format yields <balls> <cubes> <stars>."""
-    checks = {ThingKind.Ball: balls, ThingKind.Cube: cubes, ThingKind.Star: stars}
+    checks = {ThingKind.Balle: balls, ThingKind.Cube: cubes, ThingKind.Etoile: stars}
     for kind, todo in checks.items():
         if todo == "None":
             continue
@@ -79,7 +78,7 @@ def _(formatted, balls, cubes, stars):
 @then(parsers.parse("found all {balls:S} {cubes:S} {stars:S}"))
 def _(things, balls, cubes, stars):
     """found all <balls> <cubes> <stars>."""
-    checks = {ThingKind.Ball: balls, ThingKind.Cube: cubes, ThingKind.Star: stars}
+    checks = {ThingKind.Balle: balls, ThingKind.Cube: cubes, ThingKind.Etoile: stars}
     for kind, todo in checks.items():
         if todo == "None":
             continue
@@ -96,7 +95,7 @@ def _(things, balls, cubes, stars):
 @then(parsers.parse("found best 1 {balls:S} {cubes:S} {stars:S}"))
 def _(things, balls, cubes, stars):
     """found best 1 <balls> <cubes> <stars>."""
-    checks = {ThingKind.Ball: balls, ThingKind.Cube: cubes, ThingKind.Star: stars}
+    checks = {ThingKind.Balle: balls, ThingKind.Cube: cubes, ThingKind.Etoile: stars}
     for kind, example in checks.items():
         if example == "None":
             continue

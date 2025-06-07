@@ -8,9 +8,7 @@ import colorsys
 import logging
 from collections import deque
 from enum import IntEnum
-from functools import cached_property
 from itertools import combinations
-from pathlib import Path
 from typing import List, Tuple
 
 import cv2
@@ -121,7 +119,7 @@ class LaneList(DetectableList[Lane]):
     def add_lines(cls, lines):
         """Add new lines to moving average."""
 
-        info = cls.analyze_lines(lines)
+        # info = cls.analyze_lines(lines)
 
         # Combine new lines with history.
         if len(cls.lines) < 2:
@@ -205,4 +203,4 @@ class LaneList(DetectableList[Lane]):
         return [i for k in LaneKind for i in best.get(k, [0, 0, 0]) if k < 9]
 
     def __str__(self) -> str:
-        return f"LaneList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"
+        return f"LaneList<{hex(id(self))}({', '.join(str(t) for t in self)})>"

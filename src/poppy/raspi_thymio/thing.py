@@ -4,11 +4,9 @@
 Things that can be detected.
 """
 
-import colorsys
 import logging
 import os
 from enum import IntEnum
-from functools import cached_property
 from pathlib import Path
 from typing import List, Tuple
 
@@ -21,10 +19,22 @@ from .self_type import Self
 
 
 class ThingKind(IntEnum):
-    Ball = 0
-    Cube = 1
-    Star = 2
-    Other = 9
+    Parking = 0   # V3 native 0
+    Zebra = 1     # V3 native 14
+    Stop = 2      # V3 native 12
+    Balle = 3     # V3 native 1
+    Cube = 4      # V3 native 3
+    Cylindre = 5  # V3 native 4
+    Hexagone = 6  # V3 native 5
+    Maison = 7    # V3 native 6
+    Etoile = 8    # V3 native 11
+    Triangle = 9  # V3 native 13
+    Cible = 10    # V3 native 2
+    Nid = 11      # V3 native 10
+    Gauche = 12   # V3 native 7
+    Droite = 13   # V3 native 8
+    Voie = 14     # V3 native 9
+    Other = 15
 
 
 class Thing(Detectable):
@@ -51,7 +61,7 @@ class Thing(Detectable):
     @property
     def label(self) -> str:
         """Thing text label."""
-        return f"{self.kind.name} {self.confidence:3.2f}"
+        return f"{self.kind.name} {self.confidence:3.2f} {self.azel}"
 
     def event(self) -> List[List[int]]:
         """
@@ -72,19 +82,22 @@ class ThingList(DetectableList[Thing]):
 
     # YOLO parameters are class attributes.
     minconfidence = 0.6
-    maxdetect = 6
+    maxdetect = 15
     yolo_version = os.environ.get("UCIA_YOLO_VERSION", "v8n")
-    yolo_epochs = os.environ.get("UCIA_YOLO_EPOCHS", 100)
-    yolo_batch = os.environ.get("UCIA_YOLO_BATCH", 2)
+    yolo_epochs = os.environ.get("UCIA_YOLO_EPOCHS", 300)
+    yolo_batch = os.environ.get("UCIA_YOLO_BATCH", 30)
     yolo_weights = (
         Path(os.environ.get("UCIA_MODELS", "."))
-        / "YOLO-trained-V2"
-        / f"UCIA-YOLO{yolo_version}"
+        / "YOLO-trained-V3"
+        / f"UCIA-II-YOLO{yolo_version}"
         / f"batch-{int(yolo_batch):02d}_epo-{int(yolo_epochs):03d}"
         / "weights/best_ncnn_model"
     )
     logging.info("Loading YOLO model %s", yolo_weights)
-    yolo = YOLO(yolo_weights, task="detect", verbose=True)
+    yolo = YOLO(yolo_weights, task="detect", verbose=False)
+    logging.info("Loaded YOLO model")
+
+    kind_remap = [0, 3, 10, 4, 5, 6, 7, 12, 13, 14, 11, 8, 2, 9, 1]
 
     @classmethod
     def detect(cls, frame: Frame) -> Self:
@@ -113,7 +126,7 @@ class ThingList(DetectableList[Thing]):
             for class_id, confidence, xyxy in zip(
                 (ThingKind(int(i)) for i in boxes.cls), boxes.conf, boxes.xyxy
             ):
-                label = f"{class_id.name} {confidence:3.2f}"
+                # label = f"{class_id.name} {confidence:3.2f}"
                 # Bounding box and center
                 x1, y1, x2, y2 = (coords := xyxy.numpy().astype(int))
                 if (
@@ -132,7 +145,7 @@ class ThingList(DetectableList[Thing]):
 
                 thing = Thing(
                     xyxy=np.array((x1, y2, x2, y1)),
-                    kind=class_id,
+                    kind=ThingKind(cls.kind_remap[class_id]),
                     confidence=confidence,
                 )
                 thing.color = frame.center_color(thing.center)
@@ -154,7 +167,12 @@ class ThingList(DetectableList[Thing]):
             for obj in self
             if obj.kind == k and obj.target
         }
-        return [i for k in ThingKind for i in best.get(k, [0, 0, 0, 0]) if k < 9]
+        return [
+            i
+            for k in ThingKind
+            for i in best.get(k, [0, 0, 0, 0])
+            if k < ThingKind.Other
+        ]
 
     def __str__(self) -> str:
-        return f"ThingList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"
+        return f"ThingList<{hex(id(self))}({', '.join(str(t) for t in self)})>"

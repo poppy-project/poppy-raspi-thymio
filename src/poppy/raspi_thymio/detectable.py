@@ -6,12 +6,9 @@ Base class for features that can be detected
 
 import colorsys
 import logging
-import sys
-from dataclasses import dataclass
 from enum import Enum, IntEnum
 from functools import cached_property, total_ordering
 from itertools import chain, groupby
-from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -36,7 +33,7 @@ class Detectable:
         color: Tuple = (255, 255, 255),
         confidence: float = 1.0,
         target: bool = False,
-        ttl: int = 3,
+        ttl: int = 2,
     ) -> None:
         self.xyxy = xyxy
         self.kind = kind
@@ -154,7 +151,7 @@ class DetectableList(List[Detectable]):
                 del self[i]
                 continue
             feature.ttl -= 1
-            for j, candidate in enumerate(pool[feature.kind]):
+            for j, candidate in enumerate(pool.get(feature.kind, {})):
                 logging.debug("Detectable: eval %s", str(feature))
                 if feature.same_as(candidate):
                     logging.debug(
@@ -193,4 +190,4 @@ class DetectableList(List[Detectable]):
         return result
 
     def __str__(self) -> str:
-        return f"DetectableList<{hex(id(self))}({ ', '.join(str(t) for t in self) })>"
+        return f"DetectableList<{hex(id(self))}({', '.join(str(t) for t in self)})>"
