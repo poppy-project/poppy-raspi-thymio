@@ -1,0 +1,197 @@
+.container {  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+  gap: 0px 0px;
+  grid-auto-flow: row;
+  grid-template-areas:
+    "Video Control";
+}
+
+.Video {
+  grid-area: Video;
+  width: 660px;
+  min-height: 640px;
+}
+
+.Control {  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 0.8fr 1.2fr;
+  gap: 0px 0px;
+  grid-auto-flow: row;
+  grid-template-areas:
+    "Remote"
+    "Program";
+  grid-area: Control;
+}
+
+.Remote {
+  background-color: #F5F5F5;
+  grid-area: Remote;
+  width: 260px;
+  height: 320px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  gap: 0px 0px;
+  grid-auto-flow: row;
+  grid-template-areas:
+    ". GO ."
+    ". FORWARD ."
+    "LEFT STOP RIGHT"
+    ". BACKWARD ."
+    "N1 N2 N3"
+    "N4 N5 N6"
+    "N7 N8 N9"
+    "MINUS N0 PLUS";
+  justify-self: left;
+  justify-items: center;
+  -webkit-border-radius: 20;
+  -moz-border-radius: 20;
+  border-radius: 20px;
+  padding: 10px;
+}
+
+.Program {
+  grid-area: Program;
+  /* display: flex; */
+  /* justify-content: end; */
+  /* flex-direction: column; */
+  padding-top: 10px;
+  padding-left: 20px;
+}
+
+/* Specific remote buttons */
+
+.GO { grid-area: GO; }
+
+.STOP { grid-area: STOP; }
+
+.FORWARD { grid-area: FORWARD; }
+
+.BACKWARD { grid-area: BACKWARD; }
+
+.LEFT { grid-area: LEFT; }
+
+.RIGHT { grid-area: RIGHT; }
+
+.N1 { grid-area: N1; }
+
+.N2 { grid-area: N2; }
+
+.N3 { grid-area: N3; }
+
+.N4 { grid-area: N4; }
+
+.N5 { grid-area: N5; }
+
+.N6 { grid-area: N6; }
+
+.N7 { grid-area: N7; }
+
+.N8 { grid-area: N8; }
+
+.N9 { grid-area: N9; }
+
+.MINUS { grid-area: MINUS; }
+
+.N0 { grid-area: N0; }
+
+.PLUS { grid-area: PLUS; }
+
+
+/* Buttons for remote, program, and power */
+
+.btn {
+  background: #FC9B4C;
+  background-image: -webkit-linear-gradient(top, #FC9B4C, #E38436);
+  background-image: -moz-linear-gradient(top, #FC9B4C, #E38436);
+  background-image: -ms-linear-gradient(top, #FC9B4C, #E38436);
+  background-image: -o-linear-gradient(top, #FC9B4C, #E38436);
+  background-image: linear-gradient(to bottom, #FC9B4C, #E38436);
+  -webkit-border-radius: 20;
+  -moz-border-radius: 20;
+  border-radius: 20px;
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 16px;
+  padding: 6px 16px 6px 16px;
+  text-decoration: none;
+  width: 80px;
+  <!-- height: 36px; -->
+}
+
+.btn:hover {
+  background: #FCA965;
+  background-image: -webkit-linear-gradient(top, #FCA965, #FC9B4C);
+  background-image: -moz-linear-gradient(top, #FCA965, #FC9B4C);
+  background-image: -ms-linear-gradient(top, #FCA965, #FC9B4C);
+  background-image: -o-linear-gradient(top, #FCA965, #FC9B4C);
+  background-image: linear-gradient(to bottom, #FCA965, #FC9B4C);
+  text-decoration: none;
+}
+
+.pgm {
+  background: #29B1CC;
+  background-image: -webkit-linear-gradient(top, #29B1CC, #249BB3);
+  background-image: -moz-linear-gradient(top, #29B1CC, #249BB3);
+  background-image: -ms-linear-gradient(top, #29B1CC, #249BB3);
+  background-image: -o-linear-gradient(top, #29B1CC, #249BB3);
+  background-image: linear-gradient(to bottom, #29B1CC, #249BB3);
+  -webkit-border-radius: 20;
+  -moz-border-radius: 20;
+  border-radius: 20px;
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 16px;
+  padding: 6px 16px 6px 16px;
+  text-decoration: none;
+  width: 240px;
+  <!-- height: 36px; -->
+}
+
+.pgm:hover {
+  background: #30D0F0;
+  background-image: -webkit-linear-gradient(top, #30D0F0, #29B1CC);
+  background-image: -moz-linear-gradient(top, #30D0F0, #29B1CC);
+  background-image: -ms-linear-gradient(top, #30D0F0, #29B1CC);
+  background-image: -o-linear-gradient(top, #30D0F0, #29B1CC);
+  background-image: linear-gradient(to bottom, #30D0F0, #29B1CC);
+  text-decoration: none;
+}
+
+.power {
+  background: #E62E4D;
+  background-image: -webkit-linear-gradient(top, #E62E4D, #CC2944);
+  background-image: -moz-linear-gradient(top, #E62E4D, #CC2944);
+  background-image: -ms-linear-gradient(top, #E62E4D, #CC2944);
+  background-image: -o-linear-gradient(top, #E62E4D, #CC2944);
+  background-image: linear-gradient(to bottom, #E62E4D, #CC2944);
+  -webkit-border-radius: 20;
+  -moz-border-radius: 20;
+  border-radius: 20px;
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 16px;
+  padding: 6px 16px 6px 16px;
+  text-decoration: none;
+  width: 240px;
+  <!-- height: 36px; -->
+}
+
+.power:hover {
+  background: #FC4C69;
+  background-image: -webkit-linear-gradient(top, #FC4C69, #E62E4D);
+  background-image: -moz-linear-gradient(top, #FC4C69, #E62E4D);
+  background-image: -ms-linear-gradient(top, #FC4C69, #E62E4D);
+  background-image: -o-linear-gradient(top, #FC4C69, #E62E4D);
+  background-image: linear-gradient(to bottom, #FC4C69, #E62E4D);
+  text-decoration: none;
+}
+
+/* Footnote */
+
+.footnote {
+  font-family: Arial;
+  font-size: 14px;
+  padding: 6px 16px 6px 16px;
+}
