@@ -22,9 +22,12 @@ from pathlib import Path
 import click
 
 from .control import Control
+from .remote import Remote
+from .thymio import Thymio
 
 FRAME_DIR = Path("/run/ucia")
 OUT_FIFO = Path("/run/ucia/detection.fifo")
+REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 
 
 @click.command(name="ucia-detector")
@@ -37,7 +40,7 @@ OUT_FIFO = Path("/run/ucia/detection.fifo")
 )
 @click.option(
     "--fifo",
-    help="Output named pipe",
+    help="Detector output named pipe",
     default=OUT_FIFO,
     show_default=True,
     type=click.Path(path_type=Path),
@@ -49,6 +52,13 @@ OUT_FIFO = Path("/run/ucia/detection.fifo")
     show_default=True,
     type=click.Path(path_type=Path, exists=False),
 )
+@click.option(
+    "--remote-fifo",
+    help="Remote output named pipe",
+    default=REMOTE_FIFO,
+    show_default=True,
+    type=click.Path(path_type=Path),
+)
 @click.option("--verbose/--quiet", default=False, help="YOLO verbose")
 @click.option(
     "--loglevel",
@@ -57,7 +67,14 @@ OUT_FIFO = Path("/run/ucia/detection.fifo")
     show_default=True,
     type=click.STRING,
 )
-def main(freq: float, fifo: Path, frame_dir: Path, verbose: bool, loglevel: str):
+def main(
+    freq: float,
+    fifo: Path,
+    frame_dir: Path,
+    remote_fifo: Path,
+    verbose: bool,
+    loglevel: str,
+):
     """
     Continuously capture an image and detect objects using YOLO.
     Send JSON records to a FIFO and record image frames in files.
@@ -65,19 +82,29 @@ def main(freq: float, fifo: Path, frame_dir: Path, verbose: bool, loglevel: str)
     loglevel_int = getattr(logging, loglevel.upper(), logging.DEBUG)
     logging.basicConfig(format="%(asctime)s %(message)s", level=loglevel_int)
     logging.info("Setting loglevel to %s = %s", loglevel, str(loglevel_int))
+    logging.propagate = False
 
     frame_dir.mkdir(mode=0o775, parents=True, exist_ok=True)
-    if not fifo.is_fifo:
-        os.mkfifo(fifo)
-        logging.info("Made FIFO %s", fifo)
-    fifo_fd = open(fifo, "w")
+
+    for f in [fifo, remote_fifo]:
+        if not f.is_fifo:
+            os.mkfifo(fifo)
+
+    thymio = Thymio(start=True)
+
+    remote = Remote(
+        fifo_fd=open(remote_fifo, "r"),
+        thymio=thymio,
+    )
+    remote.start()  # Run forever in background.
 
     control = Control(
-        fifo_fd=fifo_fd,
+        fifo_fd=open(fifo, mode="a"),
         frame_dir=frame_dir,
         freq_hz=freq,
+        thymio=thymio,
     )
-    control.start()  # run forever in foreground
+    control.start()  # Run forever in foreground.
 
 
 if __name__ == "__main__":

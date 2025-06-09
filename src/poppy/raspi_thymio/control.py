@@ -28,8 +28,8 @@ class Control(threading.Thread):
         fifo_fd: Path,
         frame_dir: Path,
         freq_hz=60,
-        # detectables=[ThingList(), LaneList()]
         detectables=[ThingList()],
+        thymio=None,
     ):
         threading.Thread.__init__(self)
         self.sleep_event = threading.Event()
@@ -40,7 +40,7 @@ class Control(threading.Thread):
         self.wait_sec = 1.0 / freq_hz
 
         self.frame = Frame(out_dir=frame_dir)
-        self.thymio = Thymio(start=True)
+        self.thymio = thymio if thymio else Thymio(start=True)
 
         # self.things = ThingList()
         # self.lanes = LaneList()
@@ -117,6 +117,6 @@ class Control(threading.Thread):
             for thing in objects:
                 v = thing.event()  # conf color az el
                 base = thing.kind * 4
-                values[base:(base + len(v))] = v
+                values[base : (base + len(v))] = v
         self.thymio.variables({"camera.thing": values})
         logging.debug("Set variable camera.thing %s", str(e))

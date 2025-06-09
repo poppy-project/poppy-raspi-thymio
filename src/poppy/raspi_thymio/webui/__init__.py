@@ -17,7 +17,7 @@ import click
 from flask import Flask, Response, render_template
 from flask.cli import FlaskGroup
 
-OUT_FIFO = Path("/run/ucia/event.fifo")
+REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 CUR_FRAME = Path("/run/ucia/frame.jpeg")
 
 app = Flask(__name__)
@@ -54,7 +54,7 @@ def generate_frames():
             frame = next(fallback)
 
         if len(frame) == 0:
-            frame = next(fallback)
+            frame = previous or next(fallback)
 
         if frame and frame != previous:
             previous = frame
@@ -131,9 +131,9 @@ def quit():
 
 @click.group(cls=FlaskGroup, create_app=lambda: app)
 @click.option(
-    "--fifo",
+    "--remote-fifo",
     help="Output named pipe",
-    default=OUT_FIFO,
+    default=REMOTE_FIFO,
     show_default=True,
     type=click.Path(path_type=Path),
 )
@@ -145,7 +145,7 @@ def quit():
     show_default=True,
     type=click.STRING,
 )
-def main(fifo: Path, verbose: bool, loglevel: str):
+def main(remote_fifo: Path, verbose: bool, loglevel: str):
     """
     Run the server for the Web UI.
     """
@@ -155,11 +155,12 @@ def main(fifo: Path, verbose: bool, loglevel: str):
 
     # Output FIFO.
     global fifo_fd
-    if not fifo.is_fifo:
-        os.mkfifo(fifo)
-        logging.info("Made FIFO %s", fifo)
-    fifo_fd = open(fifo, "w")
-    logging.info("Open output FIFO %s (%s)", fifo, fifo_fd.name)
+    if not remote_fifo.is_fifo:
+        os.mkfifo(remote_fifo)
+        logging.info("Made FIFO %s", remote_fifo)
+
+    fifo_fd =  open(remote_fifo, "a")
+    logging.info("Open output FIFO %s (%s)", remote_fifo, fifo_fd.name)
 
     # Guard for running the Web UI as a script.
     if __name__ == "__main__":
