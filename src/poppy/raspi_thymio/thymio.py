@@ -9,6 +9,8 @@ from importlib.resources import as_file, files
 
 from tdmclient import ClientAsync, aw
 
+logger = logging.getLogger(__name__)
+
 
 class Thymio:
     """
@@ -57,9 +59,9 @@ class Thymio:
             if (r := aw(self.node.compile(self.aseba_program(program)))) is None:
                 self.run()
             else:
-                logging.warning("CAN'T RUN AESL: error %d", r)
+                logger.warning("CAN'T RUN AESL: error %d", r)
         else:
-            logging.warning("Init_thymio: NO NODE")
+            logger.warning("Init_thymio: NO NODE")
 
     def run(self) -> None:
         """
@@ -68,13 +70,13 @@ class Thymio:
         if self.node:
             aw(self.node.lock())
             aw(self.node.run())
-            logging.info("RUNNING AESL")
+            logger.info("RUNNING AESL")
 
     def events(self, events: dict) -> None:
         """
         Send event to Thymio.
         """
-        logging.info("Thymio send event %s", str(events))
+        logger.info("Thymio send event %s", str(events))
         if self.node:
             aw(self.node.lock())
             aw(self.node.send_events(events))
@@ -84,7 +86,7 @@ class Thymio:
         Assign variables on Thymio.
         """
         for var, values in assignments.items():
-            logging.info("Thymio set variable %s", str(var))
+            logger.info("Thymio set variable %s", str(var))
             if self.node:
                 aw(self.node.lock())
                 aw(self.node.set_variables(assignments))

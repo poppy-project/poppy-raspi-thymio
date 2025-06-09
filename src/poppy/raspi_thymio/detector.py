@@ -25,6 +25,8 @@ from .control import Control
 from .remote import Remote
 from .thymio import Thymio
 
+logger = logging.getLogger(__name__)
+
 FRAME_DIR = Path("/run/ucia")
 OUT_FIFO = Path("/run/ucia/detection.fifo")
 REMOTE_FIFO = Path("/run/ucia/remote.fifo")
@@ -81,8 +83,8 @@ def main(
     """
     loglevel_int = getattr(logging, loglevel.upper(), logging.DEBUG)
     logging.basicConfig(format="%(asctime)s %(message)s", level=loglevel_int)
-    logging.info("Setting loglevel to %s = %s", loglevel, str(loglevel_int))
-    logging.propagate = False
+    logger.info("Setting loglevel to %s = %s", loglevel, str(loglevel_int))
+    logger.propagate = False
 
     frame_dir.mkdir(mode=0o775, parents=True, exist_ok=True)
 
@@ -93,7 +95,7 @@ def main(
     thymio = Thymio(start=True)
 
     remote = Remote(
-        fifo_fd=open(remote_fifo, "r"),
+        fifo_fd=open(remote_fifo, "w+"),
         thymio=thymio,
     )
     remote.start()  # Run forever in background.

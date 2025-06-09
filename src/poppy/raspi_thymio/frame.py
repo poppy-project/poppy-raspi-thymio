@@ -17,6 +17,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 import poppy.raspi_thymio.colors as colors
 
+logger = logging.getLogger(__name__)
+
 Mcenter = np.array([[0.5, 0, 0.5, 0], [0, 0.5, 0, 0.5]])
 
 
@@ -54,33 +56,33 @@ class Frame:
             try:
                 (Path(out_dir) / "touch").touch(exist_ok=True)
             except FileNotFoundError:
-                logging.warn(
+                logger.warn(
                     "Frame: can't write to %s, frame logging deactivated", str(out_dir)
                 )
                 out_dir = None
         self.out_dir = out_dir or Path("/tmp")
-        logging.info(
+        logger.info(
             "Frame<%s>: init, will %s.",
             hex(id(self)),
             f"log frames to {str(out_dir)}" if out_dir else "not log frames",
         )
-        logging.debug("Frame: using font %s", str(self.font))
+        logger.debug("Frame: using font %s", str(self.font))
 
     def get_frame(self, image_file: Path | None = None) -> None:
         """
         Get a video frame, from file if provided, else from camera.
         """
         if image_file:
-            logging.debug("Frame: reading from %s", str(image_file))
+            logger.debug("Frame: reading from %s", str(image_file))
             color = Image.open(image_file)
         else:
-            logging.debug("Frame: reading from camera")
+            logger.debug("Frame: reading from camera")
             color = self.camera().capture_image()
         self.color = color.resize(self.frame_size)
 
         with open(self.out_dir / "raw.jpeg", "wb") as f:
             self.color.save(f)
-            logging.info("Frame: wrote raw frame %s", f.name)
+            logger.info("Frame: wrote raw frame %s", f.name)
 
         # Invalidate cached properties
         try:
@@ -108,7 +110,7 @@ class Frame:
         # xray = cv2.bitwise_and(xray, self.mask)
 
         cv2.imwrite(str(f_name := self.out_dir / "xray.jpeg"), xray)
-        logging.debug("Frame: wrote xray frame %s", f_name)
+        logger.debug("Frame: wrote xray frame %s", f_name)
         return xray
 
     def remap_gray(self, coord: np.ndarray) -> np.ndarray:
@@ -129,7 +131,7 @@ class Frame:
             .mean(axis=0)
             .astype(int)
         )
-        # logging.debug(
+        # logger.debug(
         #     "*** midpoint color (%d,%d) = %s im %s", cx, cy, str(rgb), str(self.color)
         # )
         return rgb
@@ -178,7 +180,7 @@ class Frame:
 
         with open(self.out_dir / "frame.jpeg", "wb") as f:
             self.color.save(f)
-            logging.info("Frame: wrote frame %s", f.name)
+            logger.info("Frame: wrote frame %s", f.name)
 
     @classmethod
     def camera(cls):
@@ -191,7 +193,7 @@ class Frame:
         try:
             from picamera2 import Picamera2  # type: ignore[import-not-found]
         except ImportError:
-            logging.warn("Camera: optional dependency Picamera2 missing, no camera")
+            logger.warn("Camera: optional dependency Picamera2 missing, no camera")
             cls._camera = False
             return None
 
@@ -202,7 +204,7 @@ class Frame:
             cls._camera.preview_configuration.align()
             cls._camera.configure("preview")
             cls._camera.start()
-            logging.info("Camera %s", str(cls._camera))
+            logger.info("Camera %s", str(cls._camera))
 
         return cls._camera
 

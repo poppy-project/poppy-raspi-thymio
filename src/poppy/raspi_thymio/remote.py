@@ -11,8 +11,10 @@ from pathlib import Path
 
 from .thymio import Thymio
 
-# Remote thread
+logger = logging.getLogger(__name__)
 
+
+# Remote thread
 
 class Remote(threading.Thread):
     """
@@ -31,46 +33,49 @@ class Remote(threading.Thread):
         self.daemon = True
 
         self.fifo_fd = fifo_fd
+        self.fifo_fd.truncate()
         # self.wait_sec = 1.0 / freq_hz
 
         self.thymio = thymio
 
-        logging.info("Remote loop fires depending on FIFO %s", self.fifo_fd.name)
+        logger.info("Remote loop fires depending on FIFO %s", self.fifo_fd.name)
 
     def run(self):
         """
         Run recurring thread.
         """
-        logging.debug("Control thread run")
+        logger.debug("Remote thread run")
         for line in self.fifo_fd:
             try:
                 message = json.loads(line)
             except JSONDecodeError(e):
-                logging.warn("Ignoring mangled JSON message: %s", e)
+                logger.warn("Remote: Ignoring mangled JSON message: %s", e)
                 continue  # Skip to next message
 
             if "button" in message.keys():
                 try:
                     rc5 = int(message["button"])
                 except ValueError:
-                    logging.warn("Ignoring invalid button %s: %s", rc5, e)
+                    logger.warn("Remote: Ignoring invalid button %s: %s", rc5, e)
                     continue  # Skip to next message
+                logger.info("Remote: button %d", rc5)
                 self.button(rc5)
             elif (program := message.get("program", None)) is not None:
+                logger.info("Remote: program %s", program)
                 self.program(program)
             else:
-                logging.warn("Ignoring invalid JSON message: %s", message)
+                logger.warn("Remote: Ignoring invalid JSON message: %s", message)
 
     def button(self, button):
         """
         Handle a button event.
         """
-        logging.info("Button event from remote %s", button)
+        logger.info("Button event from remote %s", button)
         # self.thymio.events({"command": (e := [button])})
-        logging.debug("Send event command [%s]", button)
+        logger.debug("Send event command [%s]", button)
 
     def program(self, program: str):
         """
         Handle a button event.
         """
-        logging.info("Program event from remote %s", program)
+        logger.info("Program event from remote %s", program)
