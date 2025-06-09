@@ -54,7 +54,6 @@ camera = [
 [project.scripts]
 poppy-raspi-thymio-detector = "poppy.raspi_thymio.detector:main"
 poppy-raspi-thymio-webui = "poppy.raspi_thymio.webui:main"
-poppy-raspi-thymio-stop = "poppy.raspi_thymio.stop:main"
 
 [tool.hatch]
 version.path = "src/poppy/raspi_thymio/__init__.py"
