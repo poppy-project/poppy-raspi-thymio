@@ -17,6 +17,8 @@ from .detectable import Detectable, DetectableList
 from .frame import Frame
 from .self_type import Self
 
+logger = logging.getLogger(__name__)
+
 
 class ThingKind(IntEnum):
     Parking = 0   # V3 native 0
@@ -93,9 +95,9 @@ class ThingList(DetectableList[Thing]):
         / f"batch-{int(yolo_batch):02d}_epo-{int(yolo_epochs):03d}"
         / "weights/best_ncnn_model"
     )
-    logging.info("Loading YOLO model %s", yolo_weights)
+    logger.info("Loading YOLO model %s", yolo_weights)
     yolo = YOLO(yolo_weights, task="detect", verbose=False)
-    logging.info("Loaded YOLO model")
+    logger.info("Loaded YOLO model")
 
     kind_remap = [0, 3, 10, 4, 5, 6, 7, 12, 13, 14, 11, 8, 2, 9, 1]
 
@@ -117,7 +119,7 @@ class ThingList(DetectableList[Thing]):
             verbose=False,
         )
         boxes = results[0].boxes
-        logging.debug("Thing Detect: detect %d boxes", len(boxes))
+        logger.debug("Thing Detect: detect %d boxes", len(boxes))
 
         # Interpret YOLO results as Things.
         def find_features(frame, boxes):
@@ -134,7 +136,7 @@ class ThingList(DetectableList[Thing]):
                     or abs(x2 - x1) < 20
                     or abs(y2 - y1) < 20
                 ):
-                    logging.debug(
+                    logger.debug(
                         "Ignoring misshaped (%g > 0.15) %s %g %d,%d %d,%d",
                         slope,
                         class_id.name,
@@ -151,7 +153,7 @@ class ThingList(DetectableList[Thing]):
                 thing.color = frame.center_color(thing.center)
 
                 # Yield thing.
-                logging.debug("Yielding %s", str(thing))
+                logger.debug("Yielding %s", str(thing))
                 yield thing
 
         # Return list of things.

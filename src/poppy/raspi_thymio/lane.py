@@ -105,10 +105,10 @@ class LaneList(DetectableList[Lane]):
         ]
         sample = np.concatenate(lines)
         combo = cls.add_lines(lines=sample)
-        logging.debug("Detect_one: combo lines \n%s", str(combo))
+        logger.debug("Detect_one: combo lines \n%s", str(combo))
 
         best_lanes = cls.choose_best_lane(lines=combo, frame=frame)
-        logging.info("Best lanes %s", best_lanes)
+        logger.info("Best lanes %s", best_lanes)
 
         return cls(
             Lane(xyxy=np.array(line[2:6]), kind=LaneKind.Center, slope=line[6])
@@ -177,7 +177,7 @@ class LaneList(DetectableList[Lane]):
             < 100
             if abs(slope := np.arctan2(d[j, 1] - d[i, 1], d[j, 0] - d[i, 0])) < 0.78
         }
-        # logging.debug("*** comparison %s", str(comp))
+        # logger.debug("*** comparison %s", str(comp))
 
         candidates = sorted(
             [
@@ -186,7 +186,7 @@ class LaneList(DetectableList[Lane]):
             ],
             key=lambda v: v[6],
         )
-        # logging.debug("*** candidates %s", str(candidates))
+        # logger.debug("*** candidates %s", str(candidates))
 
         return candidates[: min(2, len(candidates))]
 
