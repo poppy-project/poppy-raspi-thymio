@@ -8,6 +8,8 @@ import logging
 import os
 import signal
 import subprocess
+from importlib.resources import as_file, files
+from itertools import cycle
 from pathlib import Path
 from time import sleep
 
@@ -16,6 +18,7 @@ from flask import Flask, Response, render_template
 from flask.cli import FlaskGroup
 
 OUT_FIFO = Path("/run/ucia/event.fifo")
+CUR_FRAME = Path("/run/ucia/frame.jpeg")
 
 app = Flask(__name__)
 fifo_fd = None
@@ -32,22 +35,26 @@ RC5 = dict(
 def generate_frames():
     """Get frames from /run/ucia to stream to client."""
 
-    previous = None
-    tick, fallback = 0, [f"static/PM5544-{tick}.jpg" for tick in range(3)]
+    static_resource = files("poppy.raspi_thymio.webui").joinpath("static")
+    with as_file(static_resource) as static:
+        fallback_frames = [
+            (Path(static) / f"PM5544-{i}.jpg").read_bytes() for i in range(3)
+        ]
+    fallback = cycle([fallback_frames[int(tick / 4)] for tick in range(12)])
 
+    previous = None
     while True:
         # Sleep
         sleep(0.200)
 
         # Send frame to video stream.
         try:
-            with open("/run/ucia/frame.jpeg", "rb") as file:
-                frame = file.read()
+            frame = CUR_FRAME.read_bytes()
         except FileNotFoundError:
-            with open(fallback[int(tick / 4)], "rb") as file:
-                frame = file.read()
-            # fallback = fallback[1:] + fallback[:1]
-            tick = (tick + 1) % 12
+            frame = next(fallback)
+
+        if len(frame) == 0:
+            frame = next(fallback)
 
         if frame and frame != previous:
             previous = frame
