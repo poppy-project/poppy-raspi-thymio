@@ -17,14 +17,20 @@ Why does this file exist, and why not put this in __main__?
 
 import logging
 import os
+import zmq
 from pathlib import Path
 
 import click
 
 from .control import Control
+from .remote import Remote
+from .thymio import Thymio
+
+logger = logging.getLogger(__name__)
 
 FRAME_DIR = Path("/run/ucia")
 OUT_FIFO = Path("/run/ucia/detection.fifo")
+REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 
 
 @click.command(name="ucia-detector")
@@ -36,18 +42,18 @@ OUT_FIFO = Path("/run/ucia/detection.fifo")
     type=click.FLOAT,
 )
 @click.option(
-    "--fifo",
-    help="Output named pipe",
-    default=OUT_FIFO,
-    show_default=True,
-    type=click.Path(path_type=Path),
-)
-@click.option(
     "--frame-dir",
     help="Output frame directory",
     default=FRAME_DIR,
     show_default=True,
     type=click.Path(path_type=Path, exists=False),
+)
+@click.option(
+    "--zmq-address",
+    help="Address for zmq",
+    default="tcp://localhost:5556",
+    show_default=True,
+    type=click.STRING,
 )
 @click.option("--verbose/--quiet", default=False, help="YOLO verbose")
 @click.option(
@@ -57,27 +63,50 @@ OUT_FIFO = Path("/run/ucia/detection.fifo")
     show_default=True,
     type=click.STRING,
 )
-def main(freq: float, fifo: Path, frame_dir: Path, verbose: bool, loglevel: str):
+def main(
+    freq: float,
+    frame_dir: Path,
+    zmq_address: str,
+    verbose: bool,
+    loglevel: str,
+):
     """
     Continuously capture an image and detect objects using YOLO.
     Send JSON records to a FIFO and record image frames in files.
     """
     loglevel_int = getattr(logging, loglevel.upper(), logging.DEBUG)
     logging.basicConfig(format="%(asctime)s %(message)s", level=loglevel_int)
-    logging.info("Setting loglevel to %s = %s", loglevel, str(loglevel_int))
+    logger.info("Setting loglevel to %s = %s", loglevel, str(loglevel_int))
+    logger.propagate = False
 
     frame_dir.mkdir(mode=0o775, parents=True, exist_ok=True)
-    if not fifo.is_fifo:
-        os.mkfifo(fifo)
-        logging.info("Made FIFO %s", fifo)
-    fifo_fd = open(fifo, "w")
+
+    context = zmq.Context()
+
+    pub_socket = context.socket(zmq.PUB)
+    pub_socket.bind("tcp://*:5557")
+    logging.info("Open PUB zmq %s", pub_socket)
+
+    sub_socket = context.socket(zmq.SUB)
+    sub_socket.bind("tcp://*:5556")
+    sub_socket.setsockopt(zmq.SUBSCRIBE, b'')
+    logging.info("Open SUB zmq %s", sub_socket)
+
+    thymio = Thymio(start=True)
+
+    remote = Remote(
+        zmq_socket=sub_socket,
+        thymio=thymio,
+    )
+    remote.start()  # Run forever in background.
 
     control = Control(
-        fifo_fd=fifo_fd,
+        zmq_socket=pub_socket,
         frame_dir=frame_dir,
         freq_hz=freq,
+        thymio=thymio,
     )
-    control.start()  # run forever in foreground
+    control.start()  # Run forever in foreground.
 
 
 if __name__ == "__main__":

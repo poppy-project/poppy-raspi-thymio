@@ -7,11 +7,14 @@ Control loop.
 import json
 import logging
 import threading
+import zmq
 from pathlib import Path
 
 from .frame import Frame
 from .thing import ThingKind, ThingList
 from .thymio import Thymio
+
+logger = logging.getLogger(__name__)
 
 # Control thread
 
@@ -25,38 +28,39 @@ class Control(threading.Thread):
 
     def __init__(
         self,
-        fifo_fd: Path,
+        zmq_socket,
         frame_dir: Path,
         freq_hz=60,
-        # detectables=[ThingList(), LaneList()]
         detectables=[ThingList()],
+        thymio=None,
     ):
         threading.Thread.__init__(self)
         self.sleep_event = threading.Event()
         self.daemon = False
 
-        self.fifo_fd = fifo_fd
+        self.zmq_socket = zmq_socket
+
         self.frame_dir = frame_dir
         self.wait_sec = 1.0 / freq_hz
 
         self.frame = Frame(out_dir=frame_dir)
-        self.thymio = Thymio(start=True)
+        self.thymio = thymio if thymio else Thymio(start=True)
 
         # self.things = ThingList()
         # self.lanes = LaneList()
         self.detectables = detectables
 
-        logging.info("Control loop fires every %g sec", self.wait_sec)
+        logger.info("Control loop fires every %g sec", self.wait_sec)
 
     def run(self):
         """
         Run recurring thread.
         """
-        logging.debug("Control thread run")
+        logger.debug("Control thread run")
         while True:
             self.sleep_event.clear()
             self.sleep_event.wait(self.wait_sec)
-            logging.debug("Detector thread wakeup")
+            logger.debug("Detector thread wakeup")
             threading.Thread(target=self.detect_one).start()
 
     def detect_one(self):
@@ -75,20 +79,17 @@ class Control(threading.Thread):
         # self.lanes.update_targets()
 
         # things = ThingList.detect(self.frame)
-        # logging.info("Detect found %d things", len(things))
+        # logger.info("Detect found %d things", len(things))
 
         # lanes = LaneList.detect(self.frame)
-        # logging.info("Detect found %d lanes", len(things))
+        # logger.info("Detect found %d lanes", len(things))
 
         # Write detected objects.
         # for objects in self.things, self.lanes:
         for objects in self.detectables:
             output = json.dumps(objects.format())
-            bytes = self.fifo_fd.write(f"{output}\n")
-            self.fifo_fd.flush()
-            logging.debug(
-                "Detect: wrote fifo %s (%d) %s", self.fifo_fd.name, bytes, output
-            )
+            self.zmq_socket.send_string(f"detection {output}")
+            logging.debug("Detect: wrote zmq (%s) %s", self.zmq_socket, output)
 
         # Write decorated frame.
         # self.frame.decorate(self.things, self.lanes)
@@ -98,18 +99,18 @@ class Control(threading.Thread):
         for objects in self.detectables:
             name = type(objects[0] if objects else objects).__name__.lower()
             self.thymio.events({f"camera.{name}": (e := objects.event())})
-            logging.debug(f"Send event camera.{name} %s", str(e))
+            logger.debug(f"Send event camera.{name} %s", str(e))
 
         # self.thymio.events({"camera.lane": (e := self.lanes.event())})
-        # logging.debug("Send event camera.lane %s", str(e))
+        # logger.debug("Send event camera.lane %s", str(e))
 
         for objects in self.detectables:
             for thing in objects:
                 v = thing.event()  # conf color az el
                 self.thymio.events({"camera.detect": (e := [int(thing.kind), *v])})
-                logging.debug("Send event camera.detect %s", str(e))
+                logger.debug("Send event camera.detect %s", str(e))
                 self.thymio.variables({"camera.detect": e})
-                logging.debug("Set variable camera.detect %s", str(e))
+                logger.debug("Set variable camera.detect %s", str(e))
 
         # Send Thymio variables.
         values = [0] * (4 * (len(ThingKind) - 1))
@@ -117,6 +118,6 @@ class Control(threading.Thread):
             for thing in objects:
                 v = thing.event()  # conf color az el
                 base = thing.kind * 4
-                values[base:(base + len(v))] = v
+                values[base : (base + len(v))] = v
         self.thymio.variables({"camera.thing": values})
-        logging.debug("Set variable camera.thing %s", str(e))
+        logger.debug("Set variable camera.thing %s", str(e))

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UCIA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css"> -->
+    <script src="{{ url_for('static', filename='doButton.js') }}"></script>
+</head>
+<body>
+<div class="container">
+  <div class="Video">
+    <iframe id="video" width="640" height="640" src="/video"
+    frameborder="0"></iframe>
+    <p class="footnote">UCIA 2025-06-19 {{ software_version }} —
+    <a href="https://laligue33.org/">Ligue de l'Enseignement 33</a>,
+    <a href="https://poppy-station.org/">Poppy Station</a>,
+    <a href="https://inria.fr/">Inria</a>
+    <br/>Nous remercions la <a href="https://www.nouvelle-aquitaine.fr">Région Nouvelle Aquitaine</a>
+    pour son soutien financier
+    </p>
+  </div>
+  <div class="Control">
+    <div class="Remote">
+      <div class="GO"><button id="GO" class="btn" onclick="doButton(this.id)">GO</button></div>
+      <div class="STOP"><button id="STOP" class="btn" onclick="doButton(this.id)">STOP</button></div>
+      <div class="FORWARD"><button id="FORWARD" class="btn" onclick="doButton(this.id)">&#9650;</button></div>
+      <div class="BACKWARD"><button id="BACKWARD" class="btn" onclick="doButton(this.id)">&#9660;</button></div>
+      <div class="LEFT"><button id="LEFT" class="btn" onclick="doButton(this.id)">&#9668;</button></div>
+      <div class="RIGHT"><button id="RIGHT" class="btn" onclick="doButton(this.id)">&#9658;</button></div>
+      <div class="N1"><button id="N1" class="btn" onclick="doButton(this.id)">1</button></div>
+      <div class="N2"><button id="N2" class="btn" onclick="doButton(this.id)">2</button></div>
+      <div class="N3"><button id="N3" class="btn" onclick="doButton(this.id)">3</button></div>
+      <div class="N4"><button id="N4" class="btn" onclick="doButton(this.id)">4</button></div>
+      <div class="N5"><button id="N5" class="btn" onclick="doButton(this.id)">5</button></div>
+      <div class="N6"><button id="N6" class="btn" onclick="doButton(this.id)">6</button></div>
+      <div class="N7"><button id="N7" class="btn" onclick="doButton(this.id)">7</button></div>
+      <div class="N8"><button id="N8" class="btn" onclick="doButton(this.id)">8</button></div>
+      <div class="N9"><button id="N9" class="btn" onclick="doButton(this.id)">9</button></div>
+      <div class="MINUS"><button id="MINUS" class="btn" onclick="doButton(this.id)">&#8854;</button></div>
+      <div class="N0"><button id="N0" class="btn" onclick="doButton(this.id)">&#8596;</button></div>
+      <div class="PLUS"><button id="PLUS" class="btn" onclick="doButton(this.id)">&#8853;</button></div>
+    </div>
+    <div class="Program">
+      <p>
+      {% for program in aesl_programs %}
+      <button id="{{ program }}" class="pgm" onclick="doButton(this.id, 'program')">{{ program }}</button><br/>
+      {% endfor %}
+      </p>
+      <p>
+      <button id="restart" class="power" onclick="doButton(this.id, 'power')">Redémarrer</button><br/>
+      <!-- <button id="stopThymio" class="power" onclick="doButton(this.id, 'power')">Endormir Thymio</button><br/> -->
+      <button id="shutdown" class="power" ondblclick="doButton(this.id, 'power')">Éteindre tout (×2)</button><br/>
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

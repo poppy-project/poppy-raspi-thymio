@@ -9,6 +9,8 @@ from importlib.resources import as_file, files
 
 from tdmclient import ClientAsync, aw
 
+logger = logging.getLogger(__name__)
+
 
 class Thymio:
     """
@@ -43,7 +45,7 @@ class Thymio:
                         ("camera.detect", 5),
                         ("camera.thing", 60),
                         ("camera.lane", 3),
-                        ("command", 0),
+                        ("command", 1),
                         ("A_sound_system", 1),
                         ("M_motor_left", 1),
                         ("M_motor_right", 1),
@@ -57,9 +59,9 @@ class Thymio:
             if (r := aw(self.node.compile(self.aseba_program(program)))) is None:
                 self.run()
             else:
-                logging.warning("CAN'T RUN AESL: error %d", r)
+                logger.warning("CAN'T RUN AESL: error %d", r)
         else:
-            logging.warning("Init_thymio: NO NODE")
+            logger.warning("Init_thymio: NO NODE")
 
     def run(self) -> None:
         """
@@ -68,13 +70,13 @@ class Thymio:
         if self.node:
             aw(self.node.lock())
             aw(self.node.run())
-            logging.info("RUNNING AESL")
+            logger.info("RUNNING AESL")
 
     def events(self, events: dict) -> None:
         """
         Send event to Thymio.
         """
-        logging.info("Thymio send event %s", str(events))
+        logger.debug("Thymio send event %s", str(events))
         if self.node:
             aw(self.node.lock())
             aw(self.node.send_events(events))
@@ -84,7 +86,7 @@ class Thymio:
         Assign variables on Thymio.
         """
         for var, values in assignments.items():
-            logging.info("Thymio set variable %s", str(var))
+            logger.debug("Thymio set variable %s", str(var))
             if self.node:
                 aw(self.node.lock())
                 aw(self.node.set_variables(assignments))
@@ -101,3 +103,13 @@ class Thymio:
             aseba_program = file.read()
 
         return aseba_program
+
+    def list_aesl_programs(self) -> list[str]:
+        """Aesl program."""
+        try:
+            resource = files("poppy.raspi_thymio.aesl")
+            aesls = sorted(i.name for i in (resource / ".").glob("[a-zA-Z0-9]*.aesl"))
+        except FileNotFoundError:
+            aesls = []
+
+        return aesls

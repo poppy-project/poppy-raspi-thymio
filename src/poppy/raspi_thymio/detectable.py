@@ -16,6 +16,8 @@ import numpy as np
 from .frame import Frame
 from .self_type import Self
 
+logger = logging.getLogger(__name__)
+
 Mcenter = np.array([[0.5, 0, 0.5, 0], [0, 0.5, 0, 0.5]])
 DetectableKind = IntEnum("Kind", ("Default", "Other"))
 
@@ -68,7 +70,7 @@ class Detectable:
         col_diff = (
             colorsys.rgb_to_hls(*self.color)[0] - colorsys.rgb_to_hls(*other.color)[0]
         )
-        logging.debug(
+        logger.debug(
             "Check same %s@%s %s@%s: cen_ssq %g col_diff %g",
             str(self.color),
             str(self.center),
@@ -135,36 +137,36 @@ class DetectableList(List[Detectable]):
         """
         Detect new features, refresh TTL.
         """
-        logging.debug("Detectable: Merge into [%s]", ",".join(str(i) for i in self))
-        logging.debug(
+        logger.debug("Detectable: Merge into [%s]", ",".join(str(i) for i in self))
+        logger.debug(
             "Detectable: w/ update [%s]", ",".join(str(i) for i in sorted(update))
         )
         pool = {k: list(g) for k, g in groupby(sorted(update), key=lambda x: x.kind)}
-        logging.debug(
+        logger.debug(
             "Detectable: w/ pool(%s): %s",
             ",".join(str(i) for i in pool.keys()),
             " ".join(f"[{str(i)}] = ({str(x)})" for i, x in pool.items()),
         )
         for i, feature in enumerate(self):
             if feature.ttl < 1:
-                logging.debug("Detectable: dropping %s ttl < 1", str(feature))
+                logger.debug("Detectable: dropping %s ttl < 1", str(feature))
                 del self[i]
                 continue
             feature.ttl -= 1
             for j, candidate in enumerate(pool.get(feature.kind, {})):
-                logging.debug("Detectable: eval %s", str(feature))
+                logger.debug("Detectable: eval %s", str(feature))
                 if feature.same_as(candidate):
-                    logging.debug(
+                    logger.debug(
                         "Detectable: %s same feature %s", str(feature), str(candidate)
                     )
                     self[i] = candidate
                     del pool[feature.kind][j]
                     continue
                 else:
-                    logging.debug(
+                    logger.debug(
                         "Detectable: %s not same %s", str(feature), str(candidate)
                     )
-        logging.debug(
+        logger.debug(
             "Detectable: appending %s", " ".join(str(v) for v in pool.values())
         )
         self.extend(chain.from_iterable(pool.values()))
@@ -176,12 +178,12 @@ class DetectableList(List[Detectable]):
         features = sorted(self, key=lambda d: d.kind)
         for k, grp in groupby(features, key=lambda d: d.kind):
             subset = list(grp)
-            # logging.debug("Update: subset %s", str(DetectableList(subset)))
+            # logger.debug("Update: subset %s", str(DetectableList(subset)))
             if not any(f.target for f in subset):
                 by_conf = sorted(subset, key=lambda f: f.confidence, reverse=True)
                 if by_conf and (best := by_conf[0]):
                     best.target = True
-                    logging.debug("Update: %s is target", str(best))
+                    logger.debug("Update: %s is target", str(best))
 
     def format(self):
         """Format for JSON conversion."""
