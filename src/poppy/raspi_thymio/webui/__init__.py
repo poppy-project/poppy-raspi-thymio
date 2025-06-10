@@ -8,6 +8,7 @@ import logging
 import os
 import signal
 import subprocess
+import zmq
 from importlib.resources import as_file, files
 from itertools import cycle
 from pathlib import Path
@@ -21,7 +22,7 @@ REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 CUR_FRAME = Path("/run/ucia/frame.jpeg")
 
 app = Flask(__name__)
-fifo_fd = None
+zmq_socket = None
 
 RC5 = dict(
     ((j := i.split(":"))[0], int(j[1]))
@@ -61,13 +62,12 @@ def generate_frames():
             yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
 
 
-def write_fifo_event(event: dict):
-    """Write event to FIFO."""
-    global fifo_fd
+def write_zmq_event(event: dict):
+    """Write event to ZMQ."""
+    global zmq_socket
     output = json.dumps(event)
-    bytes = fifo_fd.write(f"{output}\n")
-    fifo_fd.flush()
-    logging.debug("Detect: wrote fifo %s (%d) %s", fifo_fd.name, bytes, output)
+    zmq_socket.send_string(f"remote {output}")
+    logging.debug("Webui: wrote zmq (%s) remote %s", zmq_socket, output)
 
 
 @app.route("/")
@@ -95,7 +95,7 @@ def button(button: str):
     """Button route sends control event."""
     rc5 = RC5.get(button, 99)
     logging.debug(f"Sending button event {button} = {rc5}.")
-    write_fifo_event(response := {"button": rc5})
+    write_zmq_event(response := {"button": rc5})
     return response
 
 
@@ -103,7 +103,7 @@ def button(button: str):
 def program(aesl: str):
     """Program route sends control event."""
     logging.debug(f"Sending program event {aesl}.")
-    write_fifo_event(response := {"program": aesl})
+    write_zmq_event(response := {"program": aesl})
     return response
 
 
@@ -130,13 +130,13 @@ def quit():
 
 
 @click.group(cls=FlaskGroup, create_app=lambda: app)
-@click.option(
-    "--remote-fifo",
-    help="Output named pipe",
-    default=REMOTE_FIFO,
-    show_default=True,
-    type=click.Path(path_type=Path),
-)
+# @click.option(
+#     "--zmq-address",
+#     help="Address for zmq",
+#     default="tcp://*:5556",
+#     show_default=True,
+#     type=click.STRING,
+# )
 @click.option("--verbose/--quiet", default=False, help="Verbosity")
 @click.option(
     "--loglevel",
@@ -145,7 +145,11 @@ def quit():
     show_default=True,
     type=click.STRING,
 )
-def main(remote_fifo: Path, verbose: bool, loglevel: str):
+def main(
+    # zmq_address: Path,
+    verbose: bool,
+    loglevel: str,
+):
     """
     Run the server for the Web UI.
     """
@@ -153,14 +157,12 @@ def main(remote_fifo: Path, verbose: bool, loglevel: str):
     logging.basicConfig(format="%(asctime)s %(message)s", level=loglevel_int)
     logging.info("Setting loglevel to %s = %s", loglevel, str(loglevel_int))
 
-    # Output FIFO.
-    global fifo_fd
-    if not remote_fifo.is_fifo:
-        os.mkfifo(remote_fifo)
-        logging.info("Made FIFO %s", remote_fifo)
-
-    fifo_fd =  open(remote_fifo, "a")
-    logging.info("Open output FIFO %s (%s)", remote_fifo, fifo_fd.name)
+    # Output zmq.
+    global zmq_socket
+    context = zmq.Context()
+    zmq_socket = context.socket(zmq.PUB)
+    zmq_socket.connect("tcp://localhost:5556")
+    logging.info("Open output zmq %s", zmq_socket)
 
     # Guard for running the Web UI as a script.
     if __name__ == "__main__":
