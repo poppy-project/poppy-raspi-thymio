@@ -389,35 +389,35 @@ sub do_trim_left
 # Motion queue
 
 onevent motor # loop runs at 100 Hz
-if Qtime[Qpc] > 0 then
-	# start new motion
-	Qtime[Qpc] = 0 - Qtime[Qpc] # mark as current by setting negative value
-end
-if Qtime[Qpc] < 0 then
-	# continue motion
-	leds.top = [180,180,0]
-	motor.left.target = QspL[Qpc]
-	motor.right.target = QspR[Qpc]
-	Qtime[Qpc] += 1
-	if Qtime[Qpc] == 0 then
-		Qid[Qpc] = 0
-		Qpc = (Qpc+1)%7
-		if Qtime[Qpc] == 0 and Qpc == Qnx then
-			motor.left.target = 0
-			motor.right.target = 0
+	if Qtime[Qpc] > 0 then
+		# start new motion
+		Qtime[Qpc] = 0 - Qtime[Qpc] # mark as current by setting negative value
+	end
+	if Qtime[Qpc] < 0 then
+		# continue motion
+		leds.top = [180,180,0]
+		motor.left.target = QspL[Qpc]
+		motor.right.target = QspR[Qpc]
+		Qtime[Qpc] += 1
+		if Qtime[Qpc] == 0 then
+			Qid[Qpc] = 0
+			Qpc = (Qpc+1)%7
+			if Qtime[Qpc] == 0 and Qpc == Qnx then
+				motor.left.target = 0
+				motor.right.target = 0
+			end
 		end
 	end
-end
-if Qtime[Qpc] == 0 and Qpc != Qnx then
-	# scan forward in the queue
-	Qpc = (Qpc+1)%7
-end
-callsub run_clock
-callsub update_leds
-# if queue is empty do behavior
-if Qnx == Qpc then
-	callsub doit
-end
+	if Qtime[Qpc] == 0 and Qpc != Qnx then
+		# scan forward in the queue
+		Qpc = (Qpc+1)%7
+	end
+	callsub run_clock
+	callsub update_leds
+	# if queue is empty do behavior
+	if Qnx == Qpc then
+		callsub doit
+	end
 
 sub update_leds
 	if  speed == 0 then
@@ -434,97 +434,30 @@ sub update_leds
 	call math.fill(leds.circle, 0)
 	leds.circle[(abs(speed - 400) / 300) % 8] = 20
 
-##! @brief Subroutine to add a task to the queue
-##! @private
-##! @param Qid task id
-##! @param Qtime time in 100ths
-##! @param QspL left motor speed
-##! @param QspR right motor speed
+# Add a task to the queue [ Qid Qtime QspL QspR ]
 sub motion_add
-if (Qnx != Qpc or (Qnx == Qpc and Qtime[Qpc] == 0)) and Qid[0]!=tmp[0] and Qid[1]!=tmp[0] and Qid[2]!=tmp[0] and Qid[3]!=tmp[0] then
-	Qid[Qnx]   = tmp[0]
-	Qtime[Qnx] = tmp[1]
-	QspL[Qnx]  = tmp[2]
-	QspR[Qnx]  = tmp[3]
-	Qnx = (Qnx+1)%7
-# else silently ignore
-end
+	if (Qnx != Qpc or (Qnx == Qpc and Qtime[Qpc] == 0)) and Qid[0]!=tmp[0] and Qid[1]!=tmp[0] and Qid[2]!=tmp[0] and Qid[3]!=tmp[0] then
+		Qid[Qnx]   = tmp[0]
+		Qtime[Qnx] = tmp[1]
+		QspL[Qnx]  = tmp[2]
+		QspR[Qnx]  = tmp[3]
+		Qnx = (Qnx+1)%7
+	# else silently ignore
+	end
 
-# ##! @brief Subroutine to cancel a task from the queue
-# ##! @private
-# ##! @param Qid task id
-# sub motion_cancel
-# for tmp[1] in 1:7 do
-# 	if Qid[tmp[1]-1] == tmp[0] then
-# #		emit Q_motion_cancelled([Qid[tmp[1]-1], Qtime[tmp[1]-1], QspL[tmp[1]-1], QspR[tmp[1]-1], tmp[1]-1])
-# 		Qtime[tmp[1]-1] = -1 # on next motor trigger Q_motion_ended, Q_motion_noneleft
-# 		# Qid[tmp[1]-1] = 0  # keep for Q_motion_ended, will be removed line 66
-# 	end
-# end
-
-##! @}
-
-##! @defgroup Motion
-##! @brief Incoming events to change motion queue: @c Q_*
-##!
-##! The REST API provides events for sending requests to the motion queue.
-##! Note that the brief description line for each will be used as the Scratch block definition.
-##!
-##! Changes to the motion queue will be broadcast using events @c Q_motion_added,
-##! @c Q_motion_cancelled, @c Q_motion_started, @c Q_motion_ended, @c Q_motion_noneleft.
-##! @{
-
-# ##! Add a task to the motion queue
-# ##! @brief Q_add_motion job \%n for \%n csec, left \%n right \%n
-# ##! @param Qid task id
-# ##! @param Qtime time in 100ths
-# ##! @param QspL left motor speed
-# ##! @param QspR right motor speed
-# onevent Q_add_motion
-# tmp[0:3] = event.args[0:3]
-# callsub motion_add
-
-# ##! Cancel a task in the motion queue
-# ##! @brief Q_cancel_motion job \%n
-# ##! @param Qid task id
-# onevent Q_cancel_motion
-# tmp[0] = event.args[0]
-# callsub motion_cancel
-
-# ##! Reset the queue and stop motors
-# ##!  @brief Q_reset
-# onevent Q_reset
-# callsub motion_reset
-
+# Reset the motion queue
 sub motion_reset
-motor.left.target = 0
-motor.right.target = 0
-call math.fill(Qid,0)
-call math.fill(Qtime,0)
-call math.fill(QspL,0)
-call math.fill(QspR,0)
-call math.fill(Qpc,0)
-call math.fill(Qnx,0)
+	motor.left.target = 0
+	motor.right.target = 0
+	call math.fill(Qid,0)
+	call math.fill(Qtime,0)
+	call math.fill(QspL,0)
+	call math.fill(QspR,0)
+	call math.fill(Qpc,0)
+	call math.fill(Qnx,0)
 
-# ##! Play a system sound
-# ##! @brief A_sound_system \%n
-# ##! @param sound system sound number
-# onevent A_sound_system
-# call sound.system(event.args[0])
-
-# ##! Run the left motor
-# ##! @brief M_motor_left \%n
-# ##! @param speed
-# onevent M_motor_left
-# motor.left.target = event.args[0]
-
-# ##! Run the right motor
-# ##! @brief M_motor_right \%n
-# ##! @param speed
-# onevent M_motor_right
-# motor.right.target = event.args[0]
-
-sub run_clock  # based on Qtime[Qpc]
+# Animate the clock face based on Qtime[Qpc]
+sub run_clock
 	call math.fill(leds.circle, 0)
 	if Qtime[Qpc] > 0 and motor.left.target == 0 and motor.right.target == 0 then
 		leds.circle[abs(Qtime[Qpc]/25) % 8] = 30
