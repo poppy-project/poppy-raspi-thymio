@@ -21,4 +21,13 @@ var doButton = function(buttonId, kind="button") {
 
     // Reenable the button after debounce delay 200 ms.
     setTimeout(buttonState, 200);
+
+    // Program buttons highlight last chosen.
+    if (kind == "program") {
+	// $('button').removeClass('chosen');
+	for (const p of document.getElementsByClassName("pgm")) {
+	    p.classList.remove('chosen');
+	}
+	button.classList.add('chosen');
+    }
 }
