@@ -88,7 +88,8 @@ def video_feed():
 @app.route("/power/shutdown")
 def halt():
     logging.warning(response := "Shutting down the RPi4.")
-    # subprocess.run("sudo", "shutdown", "-h", "now")
+    logging.shutdown()
+    subprocess.run(["sudo", "shutdown", "-fh", "now"])
     return response
 
 
@@ -112,15 +113,15 @@ def program(aesl: str):
 @app.route("/power/restart")
 def restart():
     logging.warning(response := "Restarting ucia-detector.")
-    # subprocess.run("sudo", "systemctl", "restart", "ucia-detector")
+    subprocess.run(["sudo", "systemctl", "restart", "ucia-detector"])
     return response
 
 
 @app.route("/power/stopThymio")
 def stopThymio():
     logging.warning(response := "Stopping the Thymio.")
-    # subprocess.run("sudo", "systemctl", "stop", "ucia-detector")
-    # subprocess.run("sudo", "poppy-raspi-thymio-stop")
+    # subprocess.run(["sudo", "systemctl", "stop", "ucia-detector"])
+    # subprocess.run(["sudo", "poppy-raspi-thymio-stop"])
     return response
 
 
