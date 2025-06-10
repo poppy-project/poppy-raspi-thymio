@@ -23,7 +23,7 @@ project = 'poppy-raspi-thymio'
 year = '2024-2025'
 author = 'David James Sherman'
 copyright = '{0}, {1}'.format(year, author)
-version = release = '0.2.2'
+version = release = '0.3.0'
 
 highlight_language = "none"
 
