@@ -53,7 +53,7 @@ sub doit
 sub state1_searching
 	if tracking_kind >= 3 and tracking_kind <= 11 then
 		if camera.thing[tracking_kind*4] > 20 then
-			state = 0
+			state = 2
 			callsub motion_reset
 			tmp[0:3] = [11, 50,0,0]  # wait 500 ms
 			callsub motion_add
@@ -121,7 +121,7 @@ sub state4_gesture
 		callsub motion_add
 		state = 0
 	else
-		tmp[0:3] = [33, 133, 192, 192]  # 80 mm
+		tmp[0:3] = [32, 125, 128, 128]  # 50 mm
 		callsub motion_add
 		state = 0
 	end
@@ -157,20 +157,20 @@ sub camera_override_stop
 	if state == 1 then
 		if tracking_kind >= 3 and tracking_kind <= 11 then
 			if camera.thing[tracking_kind*4] > 20 then
-				state = 0
+				state = 2
 			end
 		elseif tracking_kind == -1 then
 			for i in 10:11 do
 				if camera.thing[i*4] > 20 then
 					tracking_kind = i
-					state = 0
+					state = 2
 				end
 			end
 		elseif tracking_kind == -2 then
 			for i in 3:9 do
 				if camera.thing[i*4] > 20 then
 					tracking_kind = i
-					state = 0
+					state = 2
 				end
 			end
 		end
@@ -206,23 +206,20 @@ sub do_command
 	elseif event.args[0] == 17 then # minus
 		callsub do_normal
 	# -- specialized: add commands here
-	elseif event.args[0] == 1 then # 1 = searching nest
+	elseif event.args[0] >= 1 and event.args[0] <= 5 then
 		state = 1
-		tracking_kind = -1
-	elseif event.args[0] == 2 then # 2 = searching any thing
-		state = 1
-		tracking_kind = -2
-	elseif event.args[0] == 3 then # 3
-		state = 1
-		tracking_kind = 10
 		scan = [0,0,0]
-	elseif event.args[0] >= 4 and event.args[0] <= 6 then # 3 = searching i
+		tracking_kind = event.args[0] + 2
+	elseif event.args[0] == 6 then # 6 = searching any thing
 		state = 1
-		tracking_kind = event.args[0] - 1
-	elseif event.args[0] == 7 then # 7 = state 2
+		scan = [0,0,0]
+		tracking_kind = -2
+	elseif event.args[0] == 7 then # 7 = searching nest or target
+		state = 1
+		scan = [0,0,0]
+		tracking_kind = -1
+	elseif event.args[0] == 8 then # 8 = state 2
 		state = 2
-	elseif event.args[0] == 8 then # 8 = state 3
-		state = 3
 	elseif event.args[0] == 9 then # 9 = state 4
 		state = 4
 	end
