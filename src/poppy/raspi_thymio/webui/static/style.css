@@ -143,6 +143,7 @@
   font-family: Arial;
   color: #ffffff;
   font-size: 16px;
+  font-weight: normal;
   padding: 6px 16px 6px 16px;
   text-decoration: none;
   width: 240px;
@@ -157,6 +158,11 @@
   background-image: -o-linear-gradient(top, #30D0F0, #29B1CC);
   background-image: linear-gradient(to bottom, #30D0F0, #29B1CC);
   text-decoration: none;
+}
+
+.chosen {
+  font-weight: bold;
+  text-decoration: underline;
 }
 
 .power {

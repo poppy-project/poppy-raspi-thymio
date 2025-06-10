@@ -36,6 +36,7 @@ dependencies = [
   "pillow>=11",
   "tdmclient",
   "ultralytics",
+  "zmq",
 ]
 dynamic = [
   "version",

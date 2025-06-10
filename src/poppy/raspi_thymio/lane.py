@@ -18,6 +18,8 @@ from .detectable import Detectable, DetectableList
 from .frame import Frame
 from .self_type import Self
 
+logger = logging.getLogger(__name__)
+
 
 class LaneKind(IntEnum):
     Center = 0
