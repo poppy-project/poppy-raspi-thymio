@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Remote thread
 
+
 class Remote(threading.Thread):
     """
     Continuously watch FIFO for JSON remote control events.
@@ -82,3 +83,9 @@ class Remote(threading.Thread):
         Handle a button event.
         """
         logger.info("Program event from remote %s", program)
+        aesl = program + ".aesl"
+
+        if aesl in self.thymio.list_aesl_programs():
+            self.thymio.start(aesl)
+        else:
+            logger.warn("Remote: invalid program %s", aesl)

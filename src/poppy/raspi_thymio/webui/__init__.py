@@ -18,6 +18,8 @@ import click
 from flask import Flask, Response, render_template
 from flask.cli import FlaskGroup
 
+from poppy.raspi_thymio import __version__ as poppy_version
+
 REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 CUR_FRAME = Path("/run/ucia/frame.jpeg")
 
@@ -129,14 +131,22 @@ def quit():
     sys.exit(0)
 
 
+@app.context_processor
+def inject_aesl_programs():
+    """Thymio programs."""
+    rs = files("poppy.raspi_thymio.aesl")
+    return dict(
+        aesl_programs=sorted(i.stem for i in (rs / ".").glob("[a-zA-Z0-9]*.aesl"))
+    )
+
+
+@app.context_processor
+def inject_software_version():
+    """Software version."""
+    return dict(software_version=f"v{poppy_version}")
+
+
 @click.group(cls=FlaskGroup, create_app=lambda: app)
-# @click.option(
-#     "--zmq-address",
-#     help="Address for zmq",
-#     default="tcp://*:5556",
-#     show_default=True,
-#     type=click.STRING,
-# )
 @click.option("--verbose/--quiet", default=False, help="Verbosity")
 @click.option(
     "--loglevel",

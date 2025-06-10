@@ -103,3 +103,13 @@ class Thymio:
             aseba_program = file.read()
 
         return aseba_program
+
+    def list_aesl_programs(self) -> list[str]:
+        """Aesl program."""
+        try:
+            resource = files("poppy.raspi_thymio.aesl")
+            aesls = sorted(i.name for i in (resource / ".").glob("[a-zA-Z0-9]*.aesl"))
+        except FileNotFoundError:
+            aesls = []
+
+        return aesls
