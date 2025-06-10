@@ -175,7 +175,7 @@ class DetectableList(List[Detectable]):
         """
         For each kind, choose new target if needed.
         """
-        features = sorted(self, key=lambda d: d.kind)
+        features = filter(lambda d: d.azel[1] < 500, sorted(self, key=lambda d: d.kind))
         for k, grp in groupby(features, key=lambda d: d.kind):
             subset = list(grp)
             # logger.debug("Update: subset %s", str(DetectableList(subset)))
