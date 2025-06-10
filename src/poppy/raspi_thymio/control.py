@@ -7,6 +7,7 @@ Control loop.
 import json
 import logging
 import threading
+import zmq
 from pathlib import Path
 
 from .frame import Frame
@@ -27,7 +28,7 @@ class Control(threading.Thread):
 
     def __init__(
         self,
-        fifo_fd: Path,
+        zmq_socket,
         frame_dir: Path,
         freq_hz=60,
         detectables=[ThingList()],
@@ -37,7 +38,8 @@ class Control(threading.Thread):
         self.sleep_event = threading.Event()
         self.daemon = False
 
-        self.fifo_fd = fifo_fd
+        self.zmq_socket = zmq_socket
+
         self.frame_dir = frame_dir
         self.wait_sec = 1.0 / freq_hz
 
@@ -86,11 +88,8 @@ class Control(threading.Thread):
         # for objects in self.things, self.lanes:
         for objects in self.detectables:
             output = json.dumps(objects.format())
-            bytes = self.fifo_fd.write(f"{output}\n")
-            self.fifo_fd.flush()
-            logger.debug(
-                "Detect: wrote fifo %s (%d) %s", self.fifo_fd.name, bytes, output
-            )
+            self.zmq_socket.send_string(f"detection {output}")
+            logging.debug("Detect: wrote zmq (%s) %s", self.zmq_socket, output)
 
         # Write decorated frame.
         # self.frame.decorate(self.things, self.lanes)

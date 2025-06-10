@@ -96,7 +96,7 @@ class ThingList(DetectableList[Thing]):
         / "weights/best_ncnn_model"
     )
     logger.info("Loading YOLO model %s", yolo_weights)
-    yolo = None  # yolo = YOLO(yolo_weights, task="detect", verbose=False)
+    yolo = YOLO(yolo_weights, task="detect", verbose=False)
     logger.info("Loaded YOLO model")
 
     kind_remap = [0, 3, 10, 4, 5, 6, 7, 12, 13, 14, 11, 8, 2, 9, 1]

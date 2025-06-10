@@ -82,7 +82,7 @@ class Frame:
 
         with open(self.out_dir / "raw.jpeg", "wb") as f:
             self.color.save(f)
-            logger.info("Frame: wrote raw frame %s", f.name)
+            logger.debug("Frame: wrote raw frame %s", f.name)
 
         # Invalidate cached properties
         try:
@@ -180,7 +180,7 @@ class Frame:
 
         with open(self.out_dir / "frame.jpeg", "wb") as f:
             self.color.save(f)
-            logger.info("Frame: wrote frame %s", f.name)
+            logger.debug("Frame: wrote frame %s", f.name)
 
     @classmethod
     def camera(cls):

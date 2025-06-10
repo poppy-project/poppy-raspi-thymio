@@ -17,6 +17,7 @@ Why does this file exist, and why not put this in __main__?
 
 import logging
 import os
+import zmq
 from pathlib import Path
 
 import click
@@ -40,13 +41,13 @@ REMOTE_FIFO = Path("/run/ucia/remote.fifo")
     show_default=True,
     type=click.FLOAT,
 )
-@click.option(
-    "--fifo",
-    help="Detector output named pipe",
-    default=OUT_FIFO,
-    show_default=True,
-    type=click.Path(path_type=Path),
-)
+# @click.option(
+#     "--fifo",
+#     help="Detector output named pipe",
+#     default=OUT_FIFO,
+#     show_default=True,
+#     type=click.Path(path_type=Path),
+# )
 @click.option(
     "--frame-dir",
     help="Output frame directory",
@@ -54,12 +55,19 @@ REMOTE_FIFO = Path("/run/ucia/remote.fifo")
     show_default=True,
     type=click.Path(path_type=Path, exists=False),
 )
+# @click.option(
+#     "--remote-fifo",
+#     help="Remote output named pipe",
+#     default=REMOTE_FIFO,
+#     show_default=True,
+#     type=click.Path(path_type=Path),
+# )
 @click.option(
-    "--remote-fifo",
-    help="Remote output named pipe",
-    default=REMOTE_FIFO,
+    "--zmq-address",
+    help="Address for zmq",
+    default="tcp://localhost:5556",
     show_default=True,
-    type=click.Path(path_type=Path),
+    type=click.STRING,
 )
 @click.option("--verbose/--quiet", default=False, help="YOLO verbose")
 @click.option(
@@ -71,9 +79,10 @@ REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 )
 def main(
     freq: float,
-    fifo: Path,
+    # fifo: Path,
     frame_dir: Path,
-    remote_fifo: Path,
+    # remote_fifo: Path,
+    zmq_address: str,
     verbose: bool,
     loglevel: str,
 ):
@@ -88,20 +97,29 @@ def main(
 
     frame_dir.mkdir(mode=0o775, parents=True, exist_ok=True)
 
-    for f in [fifo, remote_fifo]:
-        if not f.is_fifo:
-            os.mkfifo(fifo)
+    context = zmq.Context()
+
+    pub_socket = context.socket(zmq.PUB)
+    pub_socket.bind("tcp://*:5557")
+    logging.info("Open PUB zmq %s", pub_socket)
+
+    sub_socket = context.socket(zmq.SUB)
+    sub_socket.bind("tcp://*:5556")
+    sub_socket.setsockopt(zmq.SUBSCRIBE, b'')
+    logging.info("Open SUB zmq %s", sub_socket)
 
     thymio = Thymio(start=True)
 
     remote = Remote(
-        fifo_fd=open(remote_fifo, "w+"),
+        # fifo_fd=open(remote_fifo, "w+"),
+        zmq_socket=sub_socket,
         thymio=thymio,
     )
     remote.start()  # Run forever in background.
 
     control = Control(
-        fifo_fd=open(fifo, mode="a"),
+        # fifo_fd=open(fifo, mode="a"),
+        zmq_socket=pub_socket,
         frame_dir=frame_dir,
         freq_hz=freq,
         thymio=thymio,

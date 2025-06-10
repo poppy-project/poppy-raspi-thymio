@@ -12,7 +12,7 @@
   <div class="Video">
     <iframe id="video" width="640" height="640" src="/video"
     frameborder="0"></iframe>
-    <p class="footnote">UCIA 2025-06-19 —
+    <p class="footnote">UCIA 2025-06-19 {{ software_version }} —
     <a href="https://laligue33.org/">Ligue de l'Enseignement 33</a>,
     <a href="https://poppy-station.org/">Poppy Station</a>,
     <a href="https://inria.fr/">Inria</a>
@@ -43,14 +43,13 @@
     </div>
     <div class="Program">
       <p>
-      <button id="humaine" class="pgm" onclick="doButton(this.id, 'program')">humaine</button><br/>
-      <button id="ucia-coureuse" class="pgm" onclick="doButton(this.id, 'program')">ucia-coureuse</button><br/>
-      <button id="ucia-balayeuse" class="pgm" onclick="doButton(this.id, 'program')">ucia-balayeuse</button><br/>
-      <button id="ucia-chasseuse" class="pgm" onclick="doButton(this.id, 'program')">ucia-chasseuse</button><br/>
+      {% for program in aesl_programs %}
+      <button id="{{ program }}" class="pgm" onclick="doButton(this.id, 'program')">{{ program }}</button><br/>
+      {% endfor %}
       </p>
       <p>
       <button id="restart" class="power" onclick="doButton(this.id, 'power')">Redémarrer</button><br/>
-      <button id="stopThymio" class="power" onclick="doButton(this.id, 'power')">Endormir Thymio</button><br/>
+      <!-- <button id="stopThymio" class="power" onclick="doButton(this.id, 'power')">Endormir Thymio</button><br/> -->
       <button id="shutdown" class="power" ondblclick="doButton(this.id, 'power')">Éteindre tout (×2)</button><br/>
       </p>
     </div>

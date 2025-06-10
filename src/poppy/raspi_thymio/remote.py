@@ -7,11 +7,15 @@ Remote loop.
 import json
 import logging
 import threading
+import zmq
 from pathlib import Path
 
 from .thymio import Thymio
 
 logger = logging.getLogger(__name__)
+
+
+# Remote thread
 
 
 # Remote thread
@@ -25,27 +29,29 @@ class Remote(threading.Thread):
 
     def __init__(
         self,
-        fifo_fd: Path,
+        zmq_socket,
         thymio: Thymio,
     ):
         threading.Thread.__init__(self)
         self.sleep_event = threading.Event()
         self.daemon = True
 
-        self.fifo_fd = fifo_fd
-        self.fifo_fd.truncate()
-        # self.wait_sec = 1.0 / freq_hz
+        self.zmq_socket = zmq_socket
+        # self.zmq_socket.setsockopt_string(zmq.SUBSCRIBE, "remote")
 
         self.thymio = thymio
 
-        logger.info("Remote loop fires depending on FIFO %s", self.fifo_fd.name)
+        logger.info("Remote loop fires depending on zmq %s", self.zmq_socket)
 
     def run(self):
         """
         Run recurring thread.
         """
-        logger.debug("Remote thread run")
-        for line in self.fifo_fd:
+        logger.info("Remote thread run")
+        while True:
+            line = self.zmq_socket.recv_string().removeprefix("remote")
+            logger.info("Remote: received %s", line)
+
             try:
                 message = json.loads(line)
             except JSONDecodeError(e):
@@ -71,7 +77,7 @@ class Remote(threading.Thread):
         Handle a button event.
         """
         logger.info("Button event from remote %s", button)
-        # self.thymio.events({"command": (e := [button])})
+        self.thymio.events({"command": (e := [button])})
         logger.debug("Send event command [%s]", button)
 
     def program(self, program: str):
@@ -79,3 +85,9 @@ class Remote(threading.Thread):
         Handle a button event.
         """
         logger.info("Program event from remote %s", program)
+        aesl = program + ".aesl"
+
+        if aesl in self.thymio.list_aesl_programs():
+            self.thymio.start(aesl)
+        else:
+            logger.warn("Remote: invalid program %s", aesl)

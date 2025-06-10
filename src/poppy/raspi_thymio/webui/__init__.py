@@ -8,6 +8,7 @@ import logging
 import os
 import signal
 import subprocess
+import zmq
 from importlib.resources import as_file, files
 from itertools import cycle
 from pathlib import Path
@@ -17,11 +18,13 @@ import click
 from flask import Flask, Response, render_template
 from flask.cli import FlaskGroup
 
+from poppy.raspi_thymio import __version__ as poppy_version
+
 REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 CUR_FRAME = Path("/run/ucia/frame.jpeg")
 
 app = Flask(__name__)
-fifo_fd = None
+zmq_socket = None
 
 RC5 = dict(
     ((j := i.split(":"))[0], int(j[1]))
@@ -61,13 +64,12 @@ def generate_frames():
             yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
 
 
-def write_fifo_event(event: dict):
-    """Write event to FIFO."""
-    global fifo_fd
+def write_zmq_event(event: dict):
+    """Write event to ZMQ."""
+    global zmq_socket
     output = json.dumps(event)
-    bytes = fifo_fd.write(f"{output}\n")
-    fifo_fd.flush()
-    logging.debug("Detect: wrote fifo %s (%d) %s", fifo_fd.name, bytes, output)
+    zmq_socket.send_string(f"remote {output}")
+    logging.debug("Webui: wrote zmq (%s) remote %s", zmq_socket, output)
 
 
 @app.route("/")
@@ -86,7 +88,8 @@ def video_feed():
 @app.route("/power/shutdown")
 def halt():
     logging.warning(response := "Shutting down the RPi4.")
-    # subprocess.run("sudo", "shutdown", "-h", "now")
+    logging.shutdown()
+    subprocess.run(["sudo", "shutdown", "-fh", "now"])
     return response
 
 
@@ -95,7 +98,7 @@ def button(button: str):
     """Button route sends control event."""
     rc5 = RC5.get(button, 99)
     logging.debug(f"Sending button event {button} = {rc5}.")
-    write_fifo_event(response := {"button": rc5})
+    write_zmq_event(response := {"button": rc5})
     return response
 
 
@@ -103,22 +106,22 @@ def button(button: str):
 def program(aesl: str):
     """Program route sends control event."""
     logging.debug(f"Sending program event {aesl}.")
-    write_fifo_event(response := {"program": aesl})
+    write_zmq_event(response := {"program": aesl})
     return response
 
 
 @app.route("/power/restart")
 def restart():
     logging.warning(response := "Restarting ucia-detector.")
-    # subprocess.run("sudo", "systemctl", "restart", "ucia-detector")
+    subprocess.run(["sudo", "systemctl", "restart", "ucia-detector"])
     return response
 
 
 @app.route("/power/stopThymio")
 def stopThymio():
     logging.warning(response := "Stopping the Thymio.")
-    # subprocess.run("sudo", "systemctl", "stop", "ucia-detector")
-    # subprocess.run("sudo", "poppy-raspi-thymio-stop")
+    # subprocess.run(["sudo", "systemctl", "stop", "ucia-detector"])
+    # subprocess.run(["sudo", "poppy-raspi-thymio-stop"])
     return response
 
 
@@ -129,14 +132,22 @@ def quit():
     sys.exit(0)
 
 
+@app.context_processor
+def inject_aesl_programs():
+    """Thymio programs."""
+    rs = files("poppy.raspi_thymio.aesl")
+    return dict(
+        aesl_programs=sorted(i.stem for i in (rs / ".").glob("[a-zA-Z0-9]*.aesl"))
+    )
+
+
+@app.context_processor
+def inject_software_version():
+    """Software version."""
+    return dict(software_version=f"v{poppy_version}")
+
+
 @click.group(cls=FlaskGroup, create_app=lambda: app)
-@click.option(
-    "--remote-fifo",
-    help="Output named pipe",
-    default=REMOTE_FIFO,
-    show_default=True,
-    type=click.Path(path_type=Path),
-)
 @click.option("--verbose/--quiet", default=False, help="Verbosity")
 @click.option(
     "--loglevel",
@@ -145,7 +156,11 @@ def quit():
     show_default=True,
     type=click.STRING,
 )
-def main(remote_fifo: Path, verbose: bool, loglevel: str):
+def main(
+    # zmq_address: Path,
+    verbose: bool,
+    loglevel: str,
+):
     """
     Run the server for the Web UI.
     """
@@ -153,14 +168,12 @@ def main(remote_fifo: Path, verbose: bool, loglevel: str):
     logging.basicConfig(format="%(asctime)s %(message)s", level=loglevel_int)
     logging.info("Setting loglevel to %s = %s", loglevel, str(loglevel_int))
 
-    # Output FIFO.
-    global fifo_fd
-    if not remote_fifo.is_fifo:
-        os.mkfifo(remote_fifo)
-        logging.info("Made FIFO %s", remote_fifo)
-
-    fifo_fd =  open(remote_fifo, "a")
-    logging.info("Open output FIFO %s (%s)", remote_fifo, fifo_fd.name)
+    # Output zmq.
+    global zmq_socket
+    context = zmq.Context()
+    zmq_socket = context.socket(zmq.PUB)
+    zmq_socket.connect("tcp://localhost:5556")
+    logging.info("Open output zmq %s", zmq_socket)
 
     # Guard for running the Web UI as a script.
     if __name__ == "__main__":

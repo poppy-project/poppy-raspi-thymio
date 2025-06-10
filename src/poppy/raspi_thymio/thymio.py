@@ -76,7 +76,7 @@ class Thymio:
         """
         Send event to Thymio.
         """
-        logger.info("Thymio send event %s", str(events))
+        logger.debug("Thymio send event %s", str(events))
         if self.node:
             aw(self.node.lock())
             aw(self.node.send_events(events))
@@ -86,7 +86,7 @@ class Thymio:
         Assign variables on Thymio.
         """
         for var, values in assignments.items():
-            logger.info("Thymio set variable %s", str(var))
+            logger.debug("Thymio set variable %s", str(var))
             if self.node:
                 aw(self.node.lock())
                 aw(self.node.set_variables(assignments))
@@ -103,3 +103,13 @@ class Thymio:
             aseba_program = file.read()
 
         return aseba_program
+
+    def list_aesl_programs(self) -> list[str]:
+        """Aesl program."""
+        try:
+            resource = files("poppy.raspi_thymio.aesl")
+            aesls = sorted(i.name for i in (resource / ".").glob("[a-zA-Z0-9]*.aesl"))
+        except FileNotFoundError:
+            aesls = []
+
+        return aesls

@@ -1,0 +1,15 @@
+var tmp[9]
+var i
+
+var _camera.heartbeat = 50
+var camera.detect[5] = [0, 0, 0, 0, 0]
+var camera.thing[60]
+
+# Constant QUEUE = 7
+
+var Qid[7]       # task id
+var Qtime[7]     # remaining time
+var QspL[7]      # motor speed L
+var QspR[7]      # motor speed R
+var Qpc = 0      # program counter
+var Qnx = 0      # next pc
