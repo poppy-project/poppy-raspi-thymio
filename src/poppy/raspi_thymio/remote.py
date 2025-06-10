@@ -18,8 +18,6 @@ logger = logging.getLogger(__name__)
 # Remote thread
 
 
-# Remote thread
-
 class Remote(threading.Thread):
     """
     Continuously watch FIFO for JSON remote control events.
@@ -37,7 +35,6 @@ class Remote(threading.Thread):
         self.daemon = True
 
         self.zmq_socket = zmq_socket
-        # self.zmq_socket.setsockopt_string(zmq.SUBSCRIBE, "remote")
 
         self.thymio = thymio
 

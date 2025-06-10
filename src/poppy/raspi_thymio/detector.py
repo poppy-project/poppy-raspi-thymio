@@ -41,13 +41,6 @@ REMOTE_FIFO = Path("/run/ucia/remote.fifo")
     show_default=True,
     type=click.FLOAT,
 )
-# @click.option(
-#     "--fifo",
-#     help="Detector output named pipe",
-#     default=OUT_FIFO,
-#     show_default=True,
-#     type=click.Path(path_type=Path),
-# )
 @click.option(
     "--frame-dir",
     help="Output frame directory",
@@ -55,13 +48,6 @@ REMOTE_FIFO = Path("/run/ucia/remote.fifo")
     show_default=True,
     type=click.Path(path_type=Path, exists=False),
 )
-# @click.option(
-#     "--remote-fifo",
-#     help="Remote output named pipe",
-#     default=REMOTE_FIFO,
-#     show_default=True,
-#     type=click.Path(path_type=Path),
-# )
 @click.option(
     "--zmq-address",
     help="Address for zmq",
@@ -79,9 +65,7 @@ REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 )
 def main(
     freq: float,
-    # fifo: Path,
     frame_dir: Path,
-    # remote_fifo: Path,
     zmq_address: str,
     verbose: bool,
     loglevel: str,
@@ -111,14 +95,12 @@ def main(
     thymio = Thymio(start=True)
 
     remote = Remote(
-        # fifo_fd=open(remote_fifo, "w+"),
         zmq_socket=sub_socket,
         thymio=thymio,
     )
     remote.start()  # Run forever in background.
 
     control = Control(
-        # fifo_fd=open(fifo, mode="a"),
         zmq_socket=pub_socket,
         frame_dir=frame_dir,
         freq_hz=freq,
