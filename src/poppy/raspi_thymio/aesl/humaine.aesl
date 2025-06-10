@@ -38,6 +38,12 @@ sub doit
 
 # Inputs
 
+onevent prox
+	call math.dot(tmp[0], prox.horizontal[0:4], [1,1,1,1,1], 1)
+	if tmp[0] > 500 then
+		callsub do_stop
+	end
+
 onevent tap
 	event.args[0] = [87]
 	callsub do_command
@@ -73,7 +79,7 @@ sub camera_detect
 		elseif camera.thing[1*4] > 50 and camera.thing[1*4 + 3] < 500 and camera.thing[1*4 + 3] < 150 then
 			# zebra sign
 			callsub do_short_stop
-		elseif camera.thing[0*4] > 50 and camera.thing[0*4 + 3] < 250 and abs(camera.thing[i*4 + 2]) < 300 then
+		elseif camera.thing[0*4] > 50 and camera.thing[0*4 + 3] < 250 and abs(camera.thing[0*4 + 2]) < 300 then
 			# parking sign
 			callsub do_stop
 		else
@@ -117,7 +123,7 @@ sub do_stop
 	callsub motion_reset
 
 sub do_normal
-	speed = base
+	speed = base / 5
 	call sound.system(2)
 	motor.left.target = speed
 	motor.right.target = speed
@@ -128,9 +134,11 @@ sub do_normal
 sub do_slow
 	speed = base
 	call sound.system(2)
-	i = (motor.left.target * 100 / motor.right.target)
-	motor.right.target = (base * 200) / (i + 100)
-	motor.left.target = (base * 2) / (i + 100) * i
+	if abs(motor.right.target) > 20 then
+		i = (motor.left.target * 100 / motor.right.target)
+		motor.right.target = (base * 200) / (i + 100)
+		motor.left.target = (base * 2) / (i + 100) * i
+	end
 
 sub do_forward
 	tmp[0:3] = [3, 100, 128, 128]  # 40 mm
