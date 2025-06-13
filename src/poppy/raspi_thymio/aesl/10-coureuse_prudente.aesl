@@ -14,7 +14,7 @@ var QspR[7]      # motor speed R
 var Qpc = 0      # program counter
 var Qnx = 0      # next pc
 
-var base = 500	 # base speed
+var base = 800	 # base speed * 10
 var speed = 0
 var black = 300
 var lost = 0
