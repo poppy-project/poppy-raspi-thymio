@@ -1,4 +1,5 @@
 {
+    "info": "Courir et balayer les débris",
     "keys": {
 	"N1": "",
 	"N2": "",
@@ -6,8 +7,8 @@
 	"N4": "",
 	"N5": "",
 	"N6": "",
-	"N7": "⏹",
+	"N7": "stop.svg",
 	"N8": "",
-	"N9": "⏸"
+	"N9": "zébra.svg"
     }
 }

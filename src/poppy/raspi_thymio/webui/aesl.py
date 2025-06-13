@@ -25,11 +25,12 @@ class AeslData:
         logger.info("Aesl program data for %s = %s", self.name, self)
 
     def load_meta(self, path: Path) -> dict:
+        logger.debug("Aesl program meta: searching for %s", path.with_suffix(".json").name)
         if (meta_file := path.with_suffix(".json")).exists():
             with open(meta_file, "r", encoding="utf-8") as f:
                 try:
                     meta = json.load(f)
-                    logger.debug("Aesl program meta for %s = %s", path, meta)
+                    logger.debug("Aesl program meta for %s: found %s", path.name, meta)
                     return meta
                 except json.decoder.JSONDecodeError:
                     pass  # fall through to default return
