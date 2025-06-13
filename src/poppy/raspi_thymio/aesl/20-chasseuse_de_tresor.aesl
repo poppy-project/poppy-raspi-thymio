@@ -105,8 +105,8 @@ sub state3_tracking_el
 	if abs(camera.thing[tracking_kind * 4 + 3]) < 50 then
 		state = 4
 	else
-		motor.left.target = 70
-		motor.right.target = 70
+		motor.left.target = 70 + (abs(camera.thing[tracking_kind * 4 + 3]) / 5)
+		motor.right.target = motor.left.target
 	end
 	leds.bottom.left = [0, 200,0]
 	leds.bottom.right = [0, 200, 0]
