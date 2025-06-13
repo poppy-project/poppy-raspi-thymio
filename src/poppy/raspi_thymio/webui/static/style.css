@@ -1,4 +1,5 @@
-.container {  display: grid;
+.container {
+  display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr;
   gap: 0px 0px;
@@ -13,13 +14,15 @@
   min-height: 640px;
 }
 
-.Control {  display: grid;
+.Control {
+  display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: 0.8fr 1.2fr;
+  grid-template-rows: 0.8fr 0.13fr 1.07fr;
   gap: 0px 0px;
   grid-auto-flow: row;
   grid-template-areas:
     "Remote"
+    "Info"
     "Program";
   grid-area: Control;
 }
@@ -51,8 +54,26 @@
   padding: 10px;
 }
 
+.Info {
+  grid-area: Info;
+  display: block;
+  font-family: Arial;
+  font-size: 14px;
+  padding: 6px 16px 6px 6px;
+  width: 260px;
+  /* min-height: 50; */
+  overflow: scroll;
+  padding-top: 10px;
+  padding-left: 20px;
+  background-color: #FFFFFF;
+  -webkit-border-radius: 20;
+  -moz-border-radius: 20;
+  border-radius: 20px;
+}
+
 .Program {
   grid-area: Program;
+  width: 260px;
   /* display: flex; */
   /* justify-content: end; */
   /* flex-direction: column; */
@@ -117,8 +138,10 @@
   padding: 6px 16px 6px 16px;
   text-decoration: none;
   width: 80px;
-  <!-- height: 36px; -->
+  height: 36px;
 }
+
+.btn.img { height: 20px; }
 
 .btn:hover {
   background: #FCA965;

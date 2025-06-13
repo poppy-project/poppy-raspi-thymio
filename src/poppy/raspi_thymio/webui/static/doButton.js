@@ -1,11 +1,42 @@
-var doButton = function(buttonId, kind="button") {
+
+var resetButtonLabels = function(meta={}) {
+    for (const button of document.getElementsByClassName("btn")) {
+	if (button.id.substring(0,1) == "N" && Number(button.id.substring(1,2)) > 0) {
+	    var label = button.id.substring(1,2);
+	    button.innerText = button.textContent = button.title = label;
+	}
+    }
+}
+
+var changeButtonLabels = function(meta={}) {
+    if (meta.keys) {
+	for (const [key, label] of Object.entries(meta.keys)) {
+	    var button = document.getElementById(key);
+	    if (button && label != null) {
+		if (label.endsWith(".svg") && label in svg_assets) {
+		    window.console.info("Set " + button.id + " to SVG label /static/" + label);
+		    img = document.createElement('img');
+		    img.height = 20;
+		    img.src = "/static/" + label;
+		    img.alt = button.title = label.replace(/\.svg$/, '')
+		    button.innerText = button.textContent = "";
+		    button.appendChild(img);
+		} else {
+		    button.innerText = button.textContent = label;
+		}
+	    }
+	}
+    }
+}
+
+var doButton = function(buttonId, kind="button", meta={}) {
     var button = document.getElementById(buttonId);
     var urlCommand = window.location.href + kind + "/" + buttonId;
 
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
 	if (this.readyState == 4 && this.status == 200) {
-	    document.getElementById("console").innerHTML = this.responseText;
+	    window.console.info(this.responseText);
 	}
     };
 
@@ -24,10 +55,20 @@ var doButton = function(buttonId, kind="button") {
 
     // Program buttons highlight last chosen.
     if (kind == "program") {
-	// $('button').removeClass('chosen');
+	// Remove "chosen" property from all program buttons.
 	for (const p of document.getElementsByClassName("pgm")) {
 	    p.classList.remove('chosen');
 	}
+	// Add "chosen" property to this program button.
 	button.classList.add('chosen');
+	resetButtonLabels();
+	changeButtonLabels(meta);
+	// Update info area.
+	var info = document.getElementById("info");
+	if (info && "info" in meta) {
+	    info.innerText = info.textContent = meta.info;
+	} else {
+	    info.innerText = info.textContent = "";
+	}
     }
 }
