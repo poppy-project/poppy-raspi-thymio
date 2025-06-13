@@ -210,6 +210,9 @@ sub do_command
 		state = 1
 		scan = [0,0,0]
 		tracking_kind = event.args[0] + 2
+		if tracking_kind == 6 then
+			tracking_kind = 8  # substitute star for hexagon
+		end
 	elseif event.args[0] == 6 then # 6 = searching any thing
 		state = 1
 		scan = [0,0,0]

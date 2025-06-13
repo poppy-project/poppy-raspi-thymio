@@ -19,6 +19,7 @@ from flask import Flask, Response, render_template
 from flask.cli import FlaskGroup
 
 from poppy.raspi_thymio import __version__ as poppy_version
+from .aesl import AeslData
 
 REMOTE_FIFO = Path("/run/ucia/remote.fifo")
 CUR_FRAME = Path("/run/ucia/frame.jpeg")
@@ -88,6 +89,8 @@ def video_feed():
 @app.route("/power/shutdown")
 def halt():
     logging.warning(response := "Shutting down the RPi4.")
+    write_zmq_event(response := {"program": "_poweroff.aesl"})
+    sleep(5)
     logging.shutdown()
     subprocess.run(["sudo", "shutdown", "-fh", "now"])
     return response
@@ -120,8 +123,8 @@ def restart():
 @app.route("/power/stopThymio")
 def stopThymio():
     logging.warning(response := "Stopping the Thymio.")
-    # subprocess.run(["sudo", "systemctl", "stop", "ucia-detector"])
-    # subprocess.run(["sudo", "poppy-raspi-thymio-stop"])
+    subprocess.run(["sudo", "systemctl", "stop", "ucia-detector"])
+    write_zmq_event(response := {"program": "_poweroff.aesl"})
     return response
 
 
@@ -135,10 +138,17 @@ def quit():
 @app.context_processor
 def inject_aesl_programs():
     """Thymio programs."""
-    rs = files("poppy.raspi_thymio.aesl")
-    return dict(
-        aesl_programs=sorted(i.stem for i in (rs / ".").glob("[a-zA-Z0-9]*.aesl"))
-    )
+    rsrc = files("poppy.raspi_thymio.aesl")
+    aesl_files = sorted(i for i in (rsrc / ".").glob("[a-zA-Z0-9]*.aesl"))
+    return dict(aesl_programs=[AeslData(p) for p in aesl_files])
+
+
+@app.context_processor
+def inject_svg_assets():
+    """Software version."""
+    rsrc = files("poppy.raspi_thymio.webui.static")
+    # return dict(svg_assets={p.name: p for p in (rsrc / ".").glob("*.svg")})
+    return dict(svg_assets={p.name: 1 for p in (rsrc / ".").glob("*.svg")})
 
 
 @app.context_processor

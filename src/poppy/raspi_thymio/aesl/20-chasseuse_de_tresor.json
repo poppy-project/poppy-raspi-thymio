@@ -1,0 +1,15 @@
+{
+    "name": "chasseuse de trésor",
+    "info": "Chasser un objet puis ramener-le à la cible",
+    "keys": {
+	"N1": "balle.svg",
+	"N2": "cube.svg",
+	"N3": "cylindre.svg",
+	"N4": "étoile.svg",
+	"N5": "maison.svg",
+	"N6": "indifférent.svg",
+	"N7": "cible.svg",
+	"N8": "·",
+	"N9": "··"
+    }
+}
