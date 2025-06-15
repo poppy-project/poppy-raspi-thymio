@@ -18,7 +18,7 @@ var base = 500	 # base speed
 var speed = 0
 var black = 300
 
-var goal
+var go.todo
 
 var state = 0    # 0 = searching; 1 = tracking az; 2 = tracking el; 3 = gesture
 var scan[3] = [0,0,0]
@@ -187,10 +187,17 @@ sub do_command
 		call sound.system(1)
 		callsub do_stop
 		state = 0
+		go.todo = 0
 	elseif event.args[0] == 53 then # go
 		call sound.system(0)
 		callsub do_normal
 		state = 0
+		if go.todo > 0 then
+			go.todo = go.todo + 1
+		else
+			go.todo = 1
+			callsub do_search_any
+		end
 	elseif event.args[0] == 0 then # 0 = sweep
 		callsub do_sweep
 	elseif event.args[0] == 80 then # forward
