@@ -2,24 +2,29 @@ var tmp[9]
 var i
 
 var _camera.heartbeat = 50
+
 var camera.detect[5] = [0, 0, 0, 0, 0]
 var camera.thing[60]
 
 # Constant QUEUE = 7
+var Q = 9
 
-var Qid[7]       # task id
-var Qtime[7]     # remaining time
-var QspL[7]      # motor speed L
-var QspR[7]      # motor speed R
+var Qid[9]       # task id
+var Qtime[9]     # remaining time
+var QspL[9]      # motor speed L
+var QspR[9]      # motor speed R
 var Qpc = 0      # program counter
 var Qnx = 0      # next pc
 
-var base = 500	 # base speed
+var base = 800	 # base speed * 10
 var speed = 0
 var black = 300
 var lost = 0
 var lost_turn[2] = [200, -350]
+#var lost_turn[2] = [70,  -140]  # 0 = arc right, 1 = arc left; tick=50 -> through 30 degrees
 var lost_phase
+var wayout.chkd[3] = [0, 0, 0]
+var wayout.seen[3] = [0, 0, 0]
 
 var state = 0    # 0 = follow track
 
@@ -37,6 +42,8 @@ sub doit
 	if state == 0 then
 		callsub camera_detect
 		callsub state0_follow_track
+	elseif state == 1 then
+		callsub state1_look_around
 	end
 
 # Following
@@ -46,25 +53,32 @@ sub state0_follow_track
 		if  prox.ground.delta[0] < black and prox.ground.delta[1] < black then
 			motor.left.target = speed / 10
 			motor.right.target = speed / 10
-			lost = 0
+			callsub not_lost
 		elseif  prox.ground.delta[0] < black and prox.ground.delta[1] >= black then
 			motor.left.target = speed / 10
 			motor.right.target = 6 * (speed / 10)
-			lost = 0
+			callsub not_lost
 		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] < black then
 			motor.left.target = 6 * (speed / 10)
 			motor.right.target = speed / 10
-			lost = 0
+			callsub not_lost
 		elseif  prox.ground.delta[0] >= black and prox.ground.delta[1] >= black then
 			lost = lost + 1
-			if  lost > 400 then
+			if lost < 5 then
+				# keep moving
+			elseif lost < 200 then
+				if wayout.chkd[1] == 0 then
+					state = 1
+					lost = lost + 70
+					callsub do_look_around
+				else
+					lost_phase = (lost / 100) % 2
+					motor.left.target = lost_turn[lost_phase]
+					motor.right.target = lost_turn[1 - lost_phase]
+				end
+			else
 				callsub do_stop
 			end
-			lost_phase = (lost / 100) % 2
-			motor.left.target = lost_turn[lost_phase]
-			motor.right.target = lost_turn[1 - lost_phase]
-			# tmp[0:3] = [6,120,137,-137]
-			# callsub motion_add
 		end
 	else
 		motor.left.target = 0
@@ -72,6 +86,40 @@ sub state0_follow_track
 	end
 	leds.bottom.left = [0, 0,0]
 	leds.bottom.right = [0, 0, 0]
+
+sub state1_look_around
+	if wayout.chkd[0] > 0 and wayout.chkd[2] > 0 then
+		wayout.chkd[1] = 99
+		# we have checked both sides,  so choose which way to turn
+		if wayout.seen[0] < black and wayout.seen[2] < black then
+			# seen both; choose randomly
+			call math.rand(lost_phase)
+			call math.clamp(lost_phase,  (lost_phase/320)+ 50, -1,1)  # bias right 2:1
+			lost_phase = (lost_phase + 1) / 2
+		elseif wayout.seen[0] < black then
+			lost_phase = 1  # seen left,  turn left
+		elseif wayout.seen[2] < black then
+			lost_phase = 0  # seen right,  turn right
+		else # very lost
+			tmp[0:3] = [101,  2*180,  137, -137]  # 180 degrees
+			callsub motion_add
+			callsub do_normal
+			state = 0
+			return
+		end
+
+		state = 0
+
+		motor.left.target = 3 * lost_turn[lost_phase]
+		motor.right.target = 3 * lost_turn[1 - lost_phase]
+	else
+		# still checking,  wait
+	end
+
+sub not_lost
+	wayout.chkd = [0,0,0]
+	wayout.seen = [0,0,0]
+	lost = 0
 
 # Inputs
 
@@ -201,11 +249,11 @@ sub do_faster
 sub do_sweep
 	tmp[0:3] = [1,100,128,128]  # 40 mm
 	callsub motion_add
-	tmp[0:3] = [2,60,137,-137]  # 30 degrees
+	tmp[0:3] = [2,2 * 30,137,-137]  # 30 degrees
 	callsub motion_add
 	tmp[0:3] = [3,100,-128,-128]  # 40 mm
 	callsub motion_add
-	tmp[0:3] = [4,60,-137,137]  # 30 degrees
+	tmp[0:3] = [4,2 * 30,-137,137]  # 30 degrees
 	callsub motion_add
 	tmp[0:3] = [5,60,0,0]  # wait 600 ms
 	callsub motion_add
@@ -224,6 +272,23 @@ sub do_short_stop
 	leds.bottom.left = [200, 0, 0]
 	leds.bottom.right = [200, 0, 0]
 
+sub do_look_around
+	wayout.chkd = [0,0,0]
+	wayout.seen = [2000,0,2000]
+
+	tmp[0:3] = [60,  66,  -150,150]  # -30 degrees
+	callsub motion_add
+	tmp[0:3] = [61,  50,  0,0]  # wait 500 ms
+	callsub motion_add
+	tmp[0:3] = [62,  132,  150,-150]  # +60 degrees
+	callsub motion_add
+	tmp[0:3] = [63,  50,  0,0]  # wait 500 ms
+	callsub motion_add
+	tmp[0:3] = [64,  66,  -150,150]  # -30 degrees
+	callsub motion_add
+	# tmp[0:3] = [65,  50,  0,0]  # wait 500 ms
+	# callsub motion_add
+
 # Standard
 
 # Motion queue
@@ -241,7 +306,7 @@ onevent motor # loop runs at 100 Hz
 		Qtime[Qpc] += 1
 		if Qtime[Qpc] == 0 then
 			Qid[Qpc] = 0
-			Qpc = (Qpc+1)%7
+			Qpc = (Qpc+1) % Q
 			if Qtime[Qpc] == 0 and Qpc == Qnx then
 				motor.left.target = 0
 				motor.right.target = 0
@@ -250,10 +315,11 @@ onevent motor # loop runs at 100 Hz
 	end
 	if Qtime[Qpc] == 0 and Qpc != Qnx then
 		# scan forward in the queue
-		Qpc = (Qpc+1)%7
+		Qpc = (Qpc+1) % Q
 	end
 	callsub run_clock
 	callsub update_leds
+	callsub update_wayout
 	# if queue is empty do behavior
 	if Qnx == Qpc then
 		callsub doit
@@ -265,6 +331,9 @@ sub update_leds
 	else
 		leds.top = [0,200,0]
 	end
+	if state == 1 then
+		leds.top = [0,200,200]
+	end
 	# leds.buttons show queue
 	call math.fill(tmp,0)
 	tmp[Qnx]=1
@@ -274,6 +343,25 @@ sub update_leds
 	call math.fill(leds.circle, 0)
 	leds.circle[(abs(speed - 400) / 300) % 8] = 20
 
+sub update_wayout
+	if  state != 1 then
+		return
+	end
+	tmp[0:2] = wayout.seen[0:2]
+	if motor.right.target - motor.left.target > 20 and abs(Qtime[Qpc]) < 6 then
+		call math.min(wayout.seen[0], prox.ground.delta[0], wayout.seen[0])
+		call math.min(wayout.seen[0], prox.ground.delta[1], wayout.seen[0])
+		if wayout.seen[0] < tmp[0] then
+			wayout.chkd[0] = wayout.chkd[0] + 1
+		end
+	elseif motor.left.target - motor.right.target > 20 and abs(Qtime[Qpc]) < 6 then
+		call math.min(wayout.seen[2], prox.ground.delta[0], wayout.seen[2])
+		call math.min(wayout.seen[2], prox.ground.delta[1], wayout.seen[2])
+		if wayout.seen[2] < tmp[2] then
+			wayout.chkd[2] = wayout.chkd[2] + 1
+		end
+	end
+
 # Add a task to the queue [ Qid Qtime QspL QspR ]
 sub motion_add
 	if (Qnx != Qpc or (Qnx == Qpc and Qtime[Qpc] == 0)) and Qid[0]!=tmp[0] and Qid[1]!=tmp[0] and Qid[2]!=tmp[0] and Qid[3]!=tmp[0] then
@@ -281,7 +369,7 @@ sub motion_add
 		Qtime[Qnx] = tmp[1]
 		QspL[Qnx]  = tmp[2]
 		QspR[Qnx]  = tmp[3]
-		Qnx = (Qnx+1)%7
+		Qnx = (Qnx+1) % Q
 	# else silently ignore
 	end
 

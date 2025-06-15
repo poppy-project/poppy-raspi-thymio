@@ -82,7 +82,7 @@ class Remote(threading.Thread):
         Handle a button event.
         """
         logger.info("Program event from remote %s", program)
-        aesl = program + ".aesl"
+        aesl = program.removesuffix(".aesl") + ".aesl"
 
         if aesl in self.thymio.list_aesl_programs():
             self.thymio.start(aesl)

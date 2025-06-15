@@ -123,8 +123,9 @@ def restart():
 @app.route("/power/stopThymio")
 def stopThymio():
     logging.warning(response := "Stopping the Thymio.")
-    subprocess.run(["sudo", "systemctl", "stop", "ucia-detector"])
     write_zmq_event(response := {"program": "_poweroff.aesl"})
+    sleep(8)
+    subprocess.run(["sudo", "systemctl", "stop", "ucia-detector"])
     return response
 
 

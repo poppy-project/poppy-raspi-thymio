@@ -108,7 +108,7 @@ class Thymio:
         """Aesl program."""
         try:
             resource = files("poppy.raspi_thymio.aesl")
-            aesls = sorted(i.name for i in (resource / ".").glob("[a-zA-Z0-9]*.aesl"))
+            aesls = sorted(i.name for i in (resource / ".").glob("*.aesl"))
         except FileNotFoundError:
             aesls = []
 
