@@ -314,8 +314,8 @@ sub do_look_around
 	callsub motion_add
 	tmp[0:3] = [64,  66,  -150,150]  # -30 degrees
 	callsub motion_add
-	tmp[0:3] = [65,  50,  0,0]  # wait 500 ms
-	callsub motion_add
+	# tmp[0:3] = [65,  50,  0,0]  # wait 500 ms
+	# callsub motion_add
 
 # Standard
 
