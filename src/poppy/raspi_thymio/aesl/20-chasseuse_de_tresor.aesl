@@ -119,11 +119,22 @@ sub state4_gesture
 		callsub motion_add
 		tmp[0:3] = [32, 100, 128, 128]  # 40 mm
 		callsub motion_add
+
 		state = 0
+		go.todo = 0
 	else
 		tmp[0:3] = [32, 125, 128, 128]  # 50 mm
 		callsub motion_add
-		state = 0
+
+		if go.todo >= 1 then
+			# Was started by GO, so continue with nest.
+			call math.clamp(go.todo, go.todo - 1, 0, 10)
+			callsub do_search_nest  # will set state = 1.
+		else
+			# Was started by NEST, so stop.
+			state = 0
+			go.todo = 0
+		end
 	end
 
 # Inputs
@@ -191,7 +202,7 @@ sub do_command
 	elseif event.args[0] == 53 then # go
 		call sound.system(0)
 		callsub do_normal
-		state = 0
+		state = 1
 		if go.todo > 0 then
 			go.todo = go.todo + 1
 		else
@@ -221,13 +232,9 @@ sub do_command
 			tracking_kind = 8  # substitute star for hexagon
 		end
 	elseif event.args[0] == 6 then # 6 = searching any thing
-		state = 1
-		scan = [0,0,0]
-		tracking_kind = -2
+		callsub do_search_any
 	elseif event.args[0] == 7 then # 7 = searching nest or target
-		state = 1
-		scan = [0,0,0]
-		tracking_kind = -1
+		callsub do_search_nest
 	elseif event.args[0] == 8 then # 8 = state 2
 		state = 2
 	elseif event.args[0] == 9 then # 9 = state 4
@@ -310,13 +317,15 @@ sub do_short_stop
 	leds.bottom.right = [200, 0, 0]
 	# speed = base
 
-sub do_trim_right
-	leds.circle[3:5] = [32,0,0]
-	motor.left.target = motor.left.target + ((abs(camera.thing[i*4+2]) - 200) / 1)
+sub do_search_any
+	state = 1
+	scan = [0,0,0]
+	tracking_kind = -2
 
-sub do_trim_left
-	leds.circle[3:5] = [0,0,32]
-	motor.right.target = motor.right.target + ((abs(camera.thing[i*4+2]) - 200) / 1)
+sub do_search_nest
+	state = 1
+	scan = [0,0,0]
+	tracking_kind = -1
 
 # Standard
 
