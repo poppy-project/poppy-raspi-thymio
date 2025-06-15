@@ -7,11 +7,12 @@ var camera.detect[5] = [0, 0, 0, 0, 0]
 var camera.thing[60]
 
 # Constant QUEUE = 7
+var Q = 9
 
-var Qid[7]       # task id
-var Qtime[7]     # remaining time
-var QspL[7]      # motor speed L
-var QspR[7]      # motor speed R
+var Qid[9]       # task id
+var Qtime[9]     # remaining time
+var QspL[9]      # motor speed L
+var QspR[9]      # motor speed R
 var Qpc = 0      # program counter
 var Qnx = 0      # next pc
 
@@ -305,7 +306,7 @@ onevent motor # loop runs at 100 Hz
 		Qtime[Qpc] += 1
 		if Qtime[Qpc] == 0 then
 			Qid[Qpc] = 0
-			Qpc = (Qpc+1)%7
+			Qpc = (Qpc+1) % Q
 			if Qtime[Qpc] == 0 and Qpc == Qnx then
 				motor.left.target = 0
 				motor.right.target = 0
@@ -314,7 +315,7 @@ onevent motor # loop runs at 100 Hz
 	end
 	if Qtime[Qpc] == 0 and Qpc != Qnx then
 		# scan forward in the queue
-		Qpc = (Qpc+1)%7
+		Qpc = (Qpc+1) % Q
 	end
 	callsub run_clock
 	callsub update_leds
@@ -368,7 +369,7 @@ sub motion_add
 		Qtime[Qnx] = tmp[1]
 		QspL[Qnx]  = tmp[2]
 		QspR[Qnx]  = tmp[3]
-		Qnx = (Qnx+1)%7
+		Qnx = (Qnx+1) % Q
 	# else silently ignore
 	end
 
