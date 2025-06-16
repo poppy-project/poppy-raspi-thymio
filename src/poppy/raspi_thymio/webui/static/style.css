@@ -217,6 +217,13 @@
   text-decoration: none;
 }
 
+.half {
+  width: 118px;
+}
+
+.left { border-right-width: 0px; }
+.right { border-left-width: 0px; }
+
 /* Footnote */
 
 .footnote {
