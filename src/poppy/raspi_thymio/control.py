@@ -52,6 +52,10 @@ class Control(threading.Thread):
 
         logger.info("Control loop fires every %g sec", self.wait_sec)
 
+        # Instantiate camera.
+        camera = self.frame.camera()
+        logger.info("Control frame uses camera %s", camera)
+
     def run(self):
         """
         Run recurring thread.
