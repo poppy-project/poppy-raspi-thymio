@@ -42,7 +42,7 @@
       <div class="N0"><button id="N0" class="btn" onclick="doButton(this.id)" title="balayer"><img src="/static/balayer.svg" alt="balayer" height="20px"></button></div>
       <div class="PLUS"><button id="PLUS" class="btn" onclick="doButton(this.id)" title="plus vite"><img src="/static/plus.svg" alt="plus vite" height="20px"></button></div>
     </div>
-    <div class="Info" id="info">
+    <div class="Info" id="info" _program="">
     </div>
     <div class="Program">
       <p>
@@ -51,7 +51,9 @@
       {% endfor %}
       </p>
       <p>
-      <button id="restart" class="power" onclick="doButton(this.id, 'power')">Redémarrer</button><br/>
+      <button id="restart" class="power half left" onclick="doButton(this.id, 'power')" title="redémarrer IA"><img src="/static/recharger.svg" alt="redémarrer AI" height="14px"> IA</button>
+      <button id="reload" class="power half right" onclick="doButton(this.id, 'program')" title="redémarrer Thymio"><img src="/static/recharger.svg" alt="redémarrer Thymio" height="14px"> Thymio</button>
+      <br/>
       <!-- <button id="stopThymio" class="power" onclick="doButton(this.id, 'power')">Endormir Thymio</button><br/> -->
       <button id="shutdown" class="power" ondblclick="doButton(this.id, 'power')">Éteindre tout (×2)</button><br/>
       </p>

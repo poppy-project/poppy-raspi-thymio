@@ -31,6 +31,16 @@ var changeButtonLabels = function(meta={}) {
 
 var doButton = function(buttonId, kind="button", meta={}) {
     var button = document.getElementById(buttonId);
+
+    // Patch in the saved program name for "reload Thymio" button.
+    if (kind == "program" && buttonId == "reload") {
+	var info = document.getElementById("info");
+	if (info && info._program) {
+	    buttonId = info._program;
+	}
+    }
+
+    // API request for button.
     var urlCommand = window.location.href + kind + "/" + buttonId;
 
     var xhttp = new XMLHttpRequest();
@@ -59,14 +69,18 @@ var doButton = function(buttonId, kind="button", meta={}) {
 	for (const p of document.getElementsByClassName("pgm")) {
 	    p.classList.remove('chosen');
 	}
-	// Add "chosen" property to this program button.
-	button.classList.add('chosen');
+	// Add "chosen" property to this program button, unless
+	// this is the "reload Thymio" button.
+	if (! button.classList.contains("power")) {
+	    button.classList.add('chosen');
+	}
 	resetButtonLabels();
 	changeButtonLabels(meta);
 	// Update info area.
 	var info = document.getElementById("info");
 	if (info && "info" in meta) {
 	    info.innerText = info.textContent = meta.info;
+	    info._program = buttonId;
 	} else {
 	    info.innerText = info.textContent = "";
 	}
