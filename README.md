@@ -44,4 +44,4 @@ tox run -e sonar
 
 # Version
 
-poppy_raspi_thymio version v0.3.3
+poppy_raspi_thymio version v0.3.4
