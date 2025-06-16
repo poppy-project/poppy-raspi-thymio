@@ -77,7 +77,10 @@ class Frame:
             color = Image.open(image_file)
         else:
             logger.debug("Frame: reading from camera")
-            color = self.camera().capture_image()
+            if not(camera := self.camera()):
+                logger.debug("Frame: no camera, can't read")
+                return
+            color = camera.capture_image()
         self.color = color.resize(self.frame_size)
 
         with open(self.out_dir / "raw.jpeg", "wb") as f:
@@ -189,23 +192,35 @@ class Frame:
         video streams.
         """
 
-        # Conditionally import optional dependency picamera2
+        # cls._camera can have one of three values:
+        # False = no camera, None = not initialized, else initialized.
+
+        if cls._camera or cls._camera is False:
+            logger.debug("Camera: initialized or False, -> %s", str(cls._camera))
+            return cls._camera
+
+        # cls._camera == None, try to initialize camera.
+
         try:
+            # Conditionally import optional dependency picamera2
             from picamera2 import Picamera2  # type: ignore[import-not-found]
         except ImportError:
-            logger.warn("Camera: optional dependency Picamera2 missing, no camera")
+            logger.warn("Camera: optional dependency Picamera2 missing, no camera -> False")
             cls._camera = False
-            return None
+            return False
 
-        if not cls._camera and cls._camera is not False:
-            cls._camera = Picamera2()
-            cls._camera.preview_configuration.main.size = cls.frame_size
-            cls._camera.preview_configuration.main.format = "RGB888"
-            cls._camera.preview_configuration.align()
-            cls._camera.configure("preview")
-            cls._camera.start()
-            logger.info("Camera %s", str(cls._camera))
+        logger.debug("Camera: instantiating camera")
+        cls._camera = Picamera2()
+        logger.debug("Camera: Picamera2() == %s", str(cls._camera))
+        cls._camera.preview_configuration.main.size = cls.frame_size
+        cls._camera.preview_configuration.main.format = "RGB888"
+        cls._camera.preview_configuration.align()
+        cls._camera.configure("preview")
+        logger.debug("Camera: starting %s", str(cls._camera))
+        cls._camera.start()
+        logger.debug("Camera: started %s", str(cls._camera))
 
+        logger.info("Camera: -> %s", str(cls._camera))
         return cls._camera
 
     def __str__(self) -> str:

@@ -51,6 +51,7 @@ class Control(threading.Thread):
         self.detectables = detectables
 
         logger.info("Control loop fires every %g sec", self.wait_sec)
+        logger.info("Control frame uses camera %s", self.frame.camera())
 
     def run(self):
         """
