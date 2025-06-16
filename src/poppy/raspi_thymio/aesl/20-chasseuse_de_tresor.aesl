@@ -257,9 +257,9 @@ sub do_slow
 	speed = base
 	call sound.system(2)
 	if abs(motor.right.target) > 20 then
-		i = (motor.left.target * 100 / motor.right.target)
-		motor.right.target = (base * 200) / (i + 100)
-		motor.left.target = (base * 2) / (i + 100) * i
+		call math.muldiv(i, base, 100, abs(motor.left.target))
+		call math.muldiv(motor.left.target, motor.left.target, i, 100)
+		call math.muldiv(motor.right.target, motor.right.target, i, 100)
 	end
 
 sub do_forward
