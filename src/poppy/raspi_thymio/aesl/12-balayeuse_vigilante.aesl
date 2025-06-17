@@ -28,6 +28,9 @@ var wayout.seen[3] = [0, 0, 0]
 
 var state = 0    # 0 = follow track
 
+var thing
+var sweep.todo = 0
+
 call math.fill(Qid, 0)
 call math.fill(Qtime,0)
 call math.fill(QspL,0)
@@ -125,9 +128,9 @@ sub not_lost
 
 sub state2_sweep
 	if speed > 0 then
-	else
-		callsub do_sweep
+		callsub do_slow
 	end
+	callsub do_sweep
 
 	state = 0
 
@@ -168,28 +171,29 @@ onevent camera.detect
 
 sub camera_detect
 	# -- specialized: add detection here
-	for i in 3:9 do
+	sweep.todo = 0
+	for thing in 3:9 do
 		# thing
-		if camera.thing[i*4] > 50 and abs(camera.thing[i*4 + 2]) < 700 then
-			if abs(camera.thing[i*4 + 2]) < 150 and camera.thing[i*4 + 3] < 200 then
-				# callsub do_sweep
-				# camera.thing[i*4] = 0
-				state = 2
-				return
-			# elseif camera.thing[i*4 + 2] > 200
-			# 	and camera.thing[i*4 + 3] < 300
-			# 	and speed > 0 then
-			# 	callsub do_trim_right
-			# elseif camera.thing[i*4 + 2] < -200
-			# 	and camera.thing[i*4 + 3] < 300
-			# 	and speed > 0 then
-			# 	callsub do_trim_left
+		if camera.thing[thing*4] > 50 and abs(camera.thing[thing*4 + 2]) < 700 then
+			call leds.buttons(30,30,30,30)
+			if abs(camera.thing[thing*4 + 2]) < 150 then
+				if camera.thing[thing*4 + 3] < 500 and speed > 0 then
+					sweep.todo = 1
+					speed = (base / 3) + ((base / 3) * (camera.thing[thing*4 + 3] / 75) / 5)
+				end
+				if camera.thing[thing*4 + 3] < 200 then
+					sweep.todo = 2
+				end
 			end
+		else
+			call leds.buttons(0,0,0,0)
 		end
 	end
 
 	if speed > 0 then
-		if camera.thing[14*4] > 50 and speed < 2000 then
+		if sweep.todo > 1 then
+			state = 2
+		elseif camera.thing[14*4] > 50 and speed < 2000 then
 			# straightaway
 			motor.right.target = motor.left.target
 			callsub do_faster
@@ -287,15 +291,15 @@ sub do_faster
 	call math.clamp(speed, speed, 0, 2000)
 
 sub do_sweep
-	tmp[0:3] = [1,100,128,128]  # 40 mm
-	callsub motion_add
-	tmp[0:3] = [2,2 * 30,137,-137]  # 30 degrees
-	callsub motion_add
-	tmp[0:3] = [3,100,-128,-128]  # 40 mm
+	tmp[0:3] = [1,50,128,128]  # 20 mm
 	callsub motion_add
 	tmp[0:3] = [4,2 * 30,-137,137]  # 30 degrees
 	callsub motion_add
-	tmp[0:3] = [5,60,0,0]  # wait 600 ms
+	tmp[0:3] = [3,100,-128,-128]  # 40 mm
+	callsub motion_add
+	tmp[0:3] = [2,2 * 30,137,-137]  # 30 degrees
+	callsub motion_add
+	tmp[0:3] = [5,100,0,0]  # wait 1000 ms
 	callsub motion_add
 
 # -- specialized: add commands here
@@ -386,7 +390,7 @@ sub update_leds
 	call math.fill(tmp,0)
 	tmp[Qnx]=1
 	tmp[Qpc]=4
-	call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
+	# call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
 	# leds.circle show speed
 	call math.fill(leds.circle, 0)
 	leds.circle[(abs(speed - 400) / 300) % 8] = 20
