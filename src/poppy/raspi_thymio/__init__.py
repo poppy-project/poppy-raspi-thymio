@@ -9,5 +9,5 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-__version__ = "0.3.4"
+__version__ = "0.3.5"
 """Define version of poppy_raspi_thymio package."""
