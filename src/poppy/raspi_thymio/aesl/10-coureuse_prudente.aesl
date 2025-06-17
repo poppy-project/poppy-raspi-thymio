@@ -140,6 +140,14 @@ onevent rc5
 onevent command
 	callsub do_command
 
+onevent button.forward
+	event.args[0] = [53]
+	callsub do_command
+
+onevent button.center
+	event.args[0] = [87]
+	callsub do_command
+
 # -- specialized
 onevent camera.detect
 	_camera.heartbeat = 50 + (((_camera.heartbeat % 10) + 1) % 7)
@@ -221,8 +229,10 @@ sub do_slow
 	call sound.system(2)
 	if abs(motor.right.target) > 20 then
 		call math.muldiv(i, base, 100, abs(motor.left.target))
-		call math.muldiv(motor.left.target, motor.left.target, i, 100)
-		call math.muldiv(motor.right.target, motor.right.target, i, 100)
+		call math.muldiv(tmp[0:1], [motor.left.target, motor.right.target], [i, i], [100, 100])
+		call math.clamp(tmp[0:1], tmp[0:1], [-150,-150], [150,150])
+		motor.left.target = tmp[0]
+		motor.right.target = tmp[1]
 	end
 
 sub do_forward
