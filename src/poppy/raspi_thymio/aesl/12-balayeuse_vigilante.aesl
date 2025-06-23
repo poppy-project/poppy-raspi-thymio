@@ -236,6 +236,7 @@ sub do_command
 	elseif event.args[0] == 85 then # left
 		callsub do_left
 	elseif event.args[0] == 16 then # plus
+		speed = speed + 118
 		callsub do_faster
 	elseif event.args[0] == 17 then # minus
 		callsub do_normal
@@ -286,7 +287,6 @@ sub do_left
 	callsub motion_add
 
 sub do_faster
-	# speed = speed * 12 / 10
 	speed = speed + 1
 	call math.clamp(speed, speed, 0, 2000)
 
@@ -386,21 +386,18 @@ sub update_leds
 	if state == 1 then
 		leds.top = [0,200,200]
 	end
-	# leds.buttons show queue
-	call math.fill(tmp,0)
-	tmp[Qnx]=1
-	tmp[Qpc]=4
-	# call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
 	# leds.circle show speed
-	call math.fill(leds.circle, 0)
-	leds.circle[(abs(speed - 400) / 300) % 8] = 20
+	call math.div(leds.circle,
+		[speed,speed,speed,speed,speed,speed,speed,speed],
+		[800, 920, 1040, 1160, 1280, 1400, 1520, 1640])
+	call math.mul(leds.circle, leds.circle, [20,20,20,20,20,20,20,20])
 
 sub update_wayout
 	if  state != 1 then
 		return
 	end
 	tmp[0:2] = wayout.seen[0:2]
-	if motor.right.target - motor.left.target > 20 and abs(Qtime[Qpc]) < 6 then
+	if motor.right.target - motor.left.target > 20 and abs(Qtime[Qpc]) < 15 then
 		call math.min(wayout.seen[0], prox.ground.delta[0], wayout.seen[0])
 		call math.min(wayout.seen[0], prox.ground.delta[1], wayout.seen[0])
 		if wayout.seen[0] < tmp[0] then
