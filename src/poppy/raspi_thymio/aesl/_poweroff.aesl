@@ -1,1 +1,4 @@
-call _poweroff()
+timer.period[1] = 10000
+
+onevent timer1
+	call _poweroff()

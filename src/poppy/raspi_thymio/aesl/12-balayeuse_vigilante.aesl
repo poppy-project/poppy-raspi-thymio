@@ -20,7 +20,7 @@ var base = 800	 # base speed * 10
 var speed = 0
 var black = 300
 var lost = 0
-var lost_turn[2] = [200, -350]
+var lost_turn[2] = [500, -500]
 #var lost_turn[2] = [70,  -140]  # 0 = arc right, 1 = arc left; tick=50 -> through 30 degrees
 var lost_phase
 var wayout.chkd[3] = [0, 0, 0]
@@ -209,8 +209,7 @@ sub camera_detect
 		elseif camera.thing[0*4] > 50 and camera.thing[0*4 + 3] < 250 and abs(camera.thing[0*4 + 2]) < 300 then
 			# parking sign
 			callsub do_stop
-		else
-			leds.circle[5:6] = [0,0]
+#		else
 		end
 	end
 
@@ -236,6 +235,7 @@ sub do_command
 	elseif event.args[0] == 85 then # left
 		callsub do_left
 	elseif event.args[0] == 16 then # plus
+		speed = speed + 118
 		callsub do_faster
 	elseif event.args[0] == 17 then # minus
 		callsub do_normal
@@ -286,7 +286,6 @@ sub do_left
 	callsub motion_add
 
 sub do_faster
-	# speed = speed * 12 / 10
 	speed = speed + 1
 	call math.clamp(speed, speed, 0, 2000)
 
@@ -328,15 +327,15 @@ sub do_look_around
 	wayout.chkd = [0,0,0]
 	wayout.seen = [2000,0,2000]
 
-	tmp[0:3] = [60,  66,  -150,150]  # -30 degrees
+	tmp[0:3] = [60,  77,  -150,150]  # -35 degrees
 	callsub motion_add
 	tmp[0:3] = [61,  50,  0,0]  # wait 500 ms
 	callsub motion_add
-	tmp[0:3] = [62,  132,  150,-150]  # +60 degrees
+	tmp[0:3] = [62,  154,  150,-150]  # +70 degrees
 	callsub motion_add
 	tmp[0:3] = [63,  50,  0,0]  # wait 500 ms
 	callsub motion_add
-	tmp[0:3] = [64,  66,  -150,150]  # -30 degrees
+	tmp[0:3] = [64,  77,  -150,150]  # -35 degrees
 	callsub motion_add
 	# tmp[0:3] = [65,  50,  0,0]  # wait 500 ms
 	# callsub motion_add
@@ -386,21 +385,18 @@ sub update_leds
 	if state == 1 then
 		leds.top = [0,200,200]
 	end
-	# leds.buttons show queue
-	call math.fill(tmp,0)
-	tmp[Qnx]=1
-	tmp[Qpc]=4
-	# call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
 	# leds.circle show speed
-	call math.fill(leds.circle, 0)
-	leds.circle[(abs(speed - 400) / 300) % 8] = 20
+	call math.div(leds.circle,
+		[speed,speed,speed,speed,speed,speed,speed,speed],
+		[800, 920, 1040, 1160, 1280, 1400, 1520, 1640])
+	call math.mul(leds.circle, leds.circle, [20,20,20,20,20,20,20,20])
 
 sub update_wayout
 	if  state != 1 then
 		return
 	end
 	tmp[0:2] = wayout.seen[0:2]
-	if motor.right.target - motor.left.target > 20 and abs(Qtime[Qpc]) < 6 then
+	if motor.right.target - motor.left.target > 20 and abs(Qtime[Qpc]) < 15 then
 		call math.min(wayout.seen[0], prox.ground.delta[0], wayout.seen[0])
 		call math.min(wayout.seen[0], prox.ground.delta[1], wayout.seen[0])
 		if wayout.seen[0] < tmp[0] then
@@ -438,7 +434,8 @@ sub motion_reset
 
 # Animate the clock face based on Qtime[Qpc]
 sub run_clock
-	call math.fill(leds.circle, 0)
-	if Qtime[Qpc] > 0 and motor.left.target == 0 and motor.right.target == 0 then
-		leds.circle[abs(Qtime[Qpc]/25) % 8] = 30
+	call math.fill(tmp,0)
+	if Qtime[Qpc] < 0 and Qnx != Qpc then
+		tmp[4 - (abs(Qtime[Qpc]/8) % 4)] = 30
 	end
+	call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
