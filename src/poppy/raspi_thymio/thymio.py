@@ -91,6 +91,14 @@ class Thymio:
                 aw(self.node.lock())
                 aw(self.node.set_variables(assignments))
 
+    def update(self, vars=["state", "speed", "tracking_kind"]) -> None:
+        """
+        Read state variables on Thymio.
+        """
+        logger.debug("Waiting for variables")
+        aw(self.node.wait_for_variables(set(vars)))
+        logger.debug("Received variables")
+
     def aseba_program(self, program=None) -> str:
         """Aesl program."""
         default = "_default.aesl"

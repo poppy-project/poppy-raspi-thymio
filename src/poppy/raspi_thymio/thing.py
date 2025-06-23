@@ -83,7 +83,7 @@ class ThingList(DetectableList[Thing]):
     """
 
     # YOLO parameters are class attributes.
-    minconfidence = 0.6
+    minconfidence = 0.5
     maxdetect = 15
     yolo_version = os.environ.get("UCIA_YOLO_VERSION", "v8n")
     yolo_epochs = os.environ.get("UCIA_YOLO_EPOCHS", 300)

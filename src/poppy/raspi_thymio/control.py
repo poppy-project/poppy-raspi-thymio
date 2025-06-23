@@ -95,9 +95,12 @@ class Control(threading.Thread):
             self.zmq_socket.send_string(f"detection {output}")
             logging.debug("Detect: wrote zmq (%s) %s", self.zmq_socket, output)
 
+        # Get target_kind so we can decorate it.
+        chosen = {}
+
         # Write decorated frame.
         # self.frame.decorate(self.things, self.lanes)
-        self.frame.decorate(*self.detectables)
+        self.frame.decorate(*self.detectables, chosen=chosen)
 
         # Send Thymio events.
         for objects in self.detectables:
@@ -125,3 +128,6 @@ class Control(threading.Thread):
                 values[base : (base + len(v))] = v
         self.thymio.variables({"camera.thing": values})
         logger.debug("Set variable camera.thing %s", str(e))
+
+        # Wait for variables.
+        # self.thymio.update()
