@@ -1,5 +1,6 @@
 var tmp[9]
 var i
+var azel[2]
 
 var _camera.heartbeat = 50
 var camera.detect[5] = [0, 0, 0, 0, 0]
@@ -37,7 +38,7 @@ mic.threshold = 12
 
 sub doit
 	if state == 0 then
-		callsub do_stop
+		callsub state0_stop
 		return
 	end
 	if state == 1 then
@@ -48,21 +49,36 @@ sub doit
 		callsub state3_tracking_el
 	elseif state == 4 then
 		callsub state4_gesture
+	elseif state == 5 then
+		callsub state5_found
 	end
 
+sub state0_stop
+	call math.fill(leds.circle, 0)
+	callsub do_stop
+
 sub state1_searching
+	# turning until target is visible
+	call math.fill(leds.circle, 0)
+	leds.top = [0, 0, 50]
+
 	if tracking_kind >= 3 and tracking_kind <= 11 then
 		if camera.thing[tracking_kind*4] > 20 then
 			state = 2
-			callsub motion_reset
-			tmp[0:3] = [11, 50,0,0]  # wait 500 ms
-			callsub motion_add
-			leds.top = [100,0,200]
 			return
 		end
 	end
+
+	callsub camera_override_stop
+
+	if state != 1 then
+		# camera override has changes state, bail out
+		call sound.system(3)
+		return
+	end
+
 	# sweep right and left
-	call math.clamp(scan[1], (2 * abs((scan[0] % 8) - 4)) - 3, -1, 1)
+	call math.clamp(scan[1], 2 * (scan[0] % 8) - 9, -1, 1)
 	scan[2] = scan[2] + (scan[1] * 60)
 	tmp[0:3] = [10, 33, scan[1]*120, scan[1]*-100]  # +/- 50 degrees ramp up
 	callsub motion_add
@@ -70,7 +86,7 @@ sub state1_searching
 	callsub motion_add
 	tmp[0:3] = [12, 33, scan[1]*120, scan[1]*-100]  # +/- 50 degrees ramp down
 	callsub motion_add
-	tmp[0:3] = [13, 100,0,0]  # wait 1000 ms, hope for detection
+	tmp[0:3] = [13, 400,0,0]  # wait 4000 ms, hope for detection
 	callsub motion_add
 
 	scan[0] = (scan[0] + 1) % 8
@@ -78,40 +94,53 @@ sub state1_searching
 	leds.bottom.right = [0, 0, ((motor.left.target / scan[1]) + 1) * 100]
 
 sub state2_tracking_az
-	# see nest or target, tracking az
+	# have seen target or nest, start tracking az
+	leds.top = [0, 50, 100]
+
+	callsub update_azel
+
 	if camera.thing[tracking_kind * 4] <= 20 then
 		state = 0
 		return
 	end
-	track_turn = camera.thing[tracking_kind * 4 + 2]
-	if abs(camera.thing[tracking_kind * 4 + 2]) < 80 then
+	track_turn = azel[0]
+	if abs(azel[0]) < 75 then
+		callsub motion_reset
 		state = 3
 		tracking_ticks = 0
 	else
 		# continue turning
-		track_turn = camera.thing[tracking_kind * 4 + 2] / 30
+		track_turn = (azel[0] * 2 ) / 25
 		call math.clamp(i, track_turn, -1, 1)
-		tmp[0:3] = [20, track_turn, (i*137)+60, ((-i)*137)+60]
+		leds.bottom.right = [0, 50 + i*50, 100 + i*100]
+		leds.bottom.left = [0, 50 - i*50, 100 - i*100]
+
+		tmp[0:3] = [20, abs(track_turn), (i*137), ((-i)*137)]
 		callsub motion_add
-		tmp[0:3] = [21, 70,0,0]  # wait, hope for detection
+		tmp[0:3] = [21, 400,0,0]  # wait, hope for detection
 		callsub motion_add
 	end
-	leds.bottom.left = [200, 200,0]
-	leds.bottom.right = [200, 200, 0]
 
 sub state3_tracking_el
-	# tracked az, tracking el
+	# have tracked az, start tracking el
+	leds.top = [0, 100, 200]
+
+	callsub update_azel
 	tracking_ticks = tracking_ticks + 1
-	if abs(camera.thing[tracking_kind * 4 + 3]) < 50 then
+	if abs(azel[1]) < 100 then
+		callsub motion_reset
 		state = 4
 	else
-		motor.left.target = 70 + (abs(camera.thing[tracking_kind * 4 + 3]) / 5)
-		motor.right.target = motor.left.target
+		motor.right.target = 30 + (abs(azel[1]) / 5)
+		motor.left.target = motor.right.target + (azel[0]/20)
 	end
-	leds.bottom.left = [0, 200,0]
-	leds.bottom.right = [0, 200, 0]
+	leds.bottom.left = [0, 100, 200]
+	leds.bottom.right = [0, 100, 200]
 
 sub state4_gesture
+	# have tracked el, perform success gesture
+	leds.top = [0, 100, 0]
+
 	if tracking_kind == 10 or tracking_kind == 11 then
 		tmp[0:3] = [30, 133, -192, -192]  # -80 mm
 		callsub motion_add
@@ -136,6 +165,21 @@ sub state4_gesture
 			go.todo = 0
 		end
 	end
+	leds.bottom.left = [0, 0, 0]
+	leds.bottom.right = [0, 0, 0]
+
+sub update_azel
+	azel[0:1] = [camera.thing[tracking_kind * 4 + 2], camera.thing[tracking_kind * 4 + 3]]
+
+sub state5_found
+	call math.fill(leds.circle, 20)
+	leds.top = [30, 0, 30]
+
+	callsub motion_reset
+	tmp[0:3] = [21, 120,0,0]  # wait, update detection in case move was already started
+	callsub motion_add
+
+	state = 2
 
 # Inputs
 
@@ -172,31 +216,45 @@ onevent camera.detect
 		callsub camera_override_stop
 	end
 
+# onevent buttons
+# 	callsub camera_override_stop
+
 sub camera_override_stop
+	leds.circle[0] = 32 - leds.circle[0]
 	if state == 1 then
 		if tracking_kind >= 3 and tracking_kind <= 11 then
 			if camera.thing[tracking_kind*4] > 20 then
-				state = 2
+				callsub motion_reset
+				state = 5
 			end
 		elseif tracking_kind == -1 then
 			for i in 10:11 do
 				if camera.thing[i*4] > 20 then
 					tracking_kind = i
-					state = 2
+					callsub motion_reset
+					state = 5
 				end
 			end
 		elseif tracking_kind == -2 then
 			for i in 3:9 do
 				if camera.thing[i*4] > 20 then
 					tracking_kind = i
-					state = 2
+					callsub motion_reset
+					state = 5
 				end
 			end
 		end
-		if state == 0 then 
+	elseif state == 2 then
+		if tracking_kind >= 3 and tracking_kind <= 11
+		   and abs(camera.thing[tracking_kind*4 + 2]) < 50 then
 			callsub motion_reset
-			leds.top = [0,200,100]
 		end
+	end
+
+	if tracking_kind >= 3 and tracking_kind <= 11 then
+		call math.fill(leds.circle[1:7], camera.thing[tracking_kind*4])
+	else
+		call math.fill(leds.circle[1:7], 0)
 	end
 
 # commands
@@ -350,7 +408,7 @@ onevent motor # loop runs at 100 Hz
 	end
 	if Qtime[Qpc] < 0 then
 		# continue motion
-		leds.top = [180,180,0]
+		# leds.top = [180,180,0]
 		motor.left.target = QspL[Qpc]
 		motor.right.target = QspR[Qpc]
 		Qtime[Qpc] += 1
@@ -375,19 +433,14 @@ onevent motor # loop runs at 100 Hz
 	end
 
 sub update_leds
-	if  speed == 0 then
+	if state == 0 and speed == 0 then
 		leds.top = [200,0,0]
 	else
 		leds.top = [0,200,0]
 	end
-	# leds.buttons show queue
-	call math.fill(tmp,0)
-	tmp[Qnx]=1
-	tmp[Qpc]=4
-	call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
-	# leds.circle show speed
-	call math.fill(leds.circle, 0)
-	leds.circle[(abs(speed - 400) / 300) % 8] = 20
+	# # leds.circle show speed
+	# call math.fill(leds.circle, 0)
+	# leds.circle[(abs(speed - 400) / 300) % 8] = 20
 
 # Add a task to the queue [ Qid Qtime QspL QspR ]
 sub motion_add
@@ -413,7 +466,8 @@ sub motion_reset
 
 # Animate the clock face based on Qtime[Qpc]
 sub run_clock
-	call math.fill(leds.circle, 0)
-	if Qtime[Qpc] > 0 and motor.left.target == 0 and motor.right.target == 0 then
-		leds.circle[abs(Qtime[Qpc]/25) % 8] = 30
+	call math.fill(tmp,0)
+	if Qtime[Qpc] < 0 and Qnx != Qpc then
+		tmp[4 - (abs(Qtime[Qpc]/8) % 4)] = 30
 	end
+	call leds.buttons(tmp[0],tmp[1],tmp[2],tmp[3])
