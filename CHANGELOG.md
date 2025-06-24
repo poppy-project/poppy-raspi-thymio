@@ -61,3 +61,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improvements to behaviors
   - Balayeuse camera.detect set flag, slow down by anticipation
   - Fix arithmetic errors when slowing down (again)
+
+## [0.3.6] (2025-06-23)
+
+  - Coureuse, Balayeuse: brisker acceleration
+  - Coureuse, Balayeuse: better “look around” handling
+  - Chasseuse: better searching (state 1)
+  - poweroff: delay 10s to accomodate Raspberry Pi shutdown
